@@ -1,0 +1,36 @@
+version: "3"
+services:
+    main:
+        build: .
+        image: reeregistry-on.azurecr.io/monitor
+        entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
+        volumes:
+            - ./src:/home/app/src
+            - ./server:/home/app/server
+        networks:
+            - default
+        deploy:
+            replicas: 1
+            update_config:
+                parallelism: 1
+                delay: 10s
+            restart_policy:
+                max_attempts: 3
+                condition: on-failure
+        ports:
+            # HOST:CONTAINER
+            - "4040:4000"
+            # Host Teacher Port:Container Teacher Port
+            - "4041:4001"
+
+        environment:
+            PUB_FILES: ./pub/
+            BIN: ./server/bin/
+            OUTPUT_FILES: ./server/output/
+
+networks:
+    default:
+        ipam:
+            driver: default
+            config:
+            - subnet: 172.200.0.0/30

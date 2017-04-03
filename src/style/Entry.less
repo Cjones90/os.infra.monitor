@@ -1,0 +1,47 @@
+body, html{
+    margin: 0;
+    padding: 0;
+}
+
+#component-entry {
+
+    h2 {
+        align-self: center;
+        text-align: center;
+    }
+    #serverContainer {
+        width: 80%;
+        border: 1px solid black;
+        height: 500px;
+        display: flex;
+        margin: auto;
+        flex-direction: column;
+        .ok { background: aquamarine; }
+        .offline { background: blueviolet; }
+        .server {
+            display: flex;
+            align-items: center;
+            width: 500px;
+            border: 1px solid black;
+            height: 18px;
+            margin: 3px;
+            padding: 5px;
+            .serverName {
+                flex: 2;
+            }
+            .serverPort {
+                flex: 1.4;
+            }
+            .serverStatus {
+                flex: 1.4;
+            }
+            .serverCount {
+                flex: 1.4;
+            }
+            .serverEnv {
+                flex: 1.4;
+            }
+        }
+    }
+
+}
