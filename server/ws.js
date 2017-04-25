@@ -32,7 +32,7 @@ module.exports = {
         setInterval(this.startKeepAliveChecks.bind(this), KEEP_ALIVE_INTERVAL)
         console.log("WSS running");
         RosterServer.init(ROSTER_WS_PORT);
-        health.registerListeners(Teacher);
+        health.registerListeners(RosterServer);
         health.attachWSConnection(this.wss)
     },
 
