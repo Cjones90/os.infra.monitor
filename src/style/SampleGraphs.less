@@ -1,0 +1,88 @@
+
+#component-samplegraphs {
+
+    svg {
+        border: "black";
+    }
+
+    #circlepacker {
+        circle {
+          fill: rgb(31, 119, 180);
+          fill-opacity: .25;
+          stroke: rgb(31, 119, 180);
+          stroke-width: 1px;
+        }
+
+        .leaf circle {
+          fill: #ff7f0e;
+          fill-opacity: 1;
+        }
+    }
+
+
+    #dendogram {
+        .node circle {
+          fill: #999;
+        }
+
+        .node text {
+          font: 10px sans-serif;
+        }
+
+        .node--internal circle {
+          fill: #555;
+        }
+
+        .node--internal text {
+          text-shadow: 0 1px 0 #fff, 0 -1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff;
+        }
+
+        .link {
+          fill: none;
+          stroke: #555;
+          stroke-opacity: 0.4;
+          stroke-width: 1.5px;
+        }
+
+    }
+
+
+    #radialTree {
+
+        .node circle {
+          fill: #999;
+        }
+
+        .node text {
+          font: 10px sans-serif;
+        }
+
+        .node--internal circle {
+          fill: #555;
+        }
+
+        .node--internal text {
+          text-shadow: 0 1px 0 #fff, 0 -1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff;
+        }
+
+        .link {
+          fill: none;
+          stroke: #555;
+          stroke-opacity: 0.4;
+          stroke-width: 1.5px;
+        }
+    }
+
+
+    #forcetree2 {
+        .link {
+          stroke: #ccc;
+        }
+
+        .node text {
+          pointer-events: none;
+          font: 10px sans-serif;
+        }
+    }
+
+}

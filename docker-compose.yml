@@ -2,11 +2,12 @@ version: "3"
 services:
     main:
         build: .
-        image: reeregistry-on.azurecr.io/monitor
+        image: reeregistry-on.azurecr.io/monitor:0.3.0
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         volumes:
             - ./src:/home/app/src
             - ./server:/home/app/server
+            # - ./pub:/home/app/pub
         deploy:
             replicas: 1
             update_config:
@@ -18,10 +19,15 @@ services:
         ports:
             # HOST:CONTAINER
             - "4040:4000"
-            # Host Teacher Port:Container Teacher Port
+            # Host WS Port:Container WS Port
             - "4041:4001"
 
         environment:
             PUB_FILES: ./pub/
             BIN: ./server/bin/
             OUTPUT_FILES: ./server/output/
+
+            # IP Address of consul leader - Temp until better solution
+            #   like a call-in "as leader" etc.
+            CONSUL_LEADER: "192.34.59.186"
+            # Also need to edit the IP in src/jsx/Graph.jsx until a more perm solution

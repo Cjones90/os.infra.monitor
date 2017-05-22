@@ -3,6 +3,9 @@
 import React from 'react';
 import DOM from 'react-dom';
 import Header from "./Header.jsx";
+import Graph from "./Graph.jsx";
+
+window.ws = ""
 
 require("../style/Entry.less")
 
@@ -23,11 +26,11 @@ const Entry = React.createClass({
 
     connectWS() {
         console.log("Connecting");
-        this.ws = new WebSocket(WS_HOST)
-        this.ws.onopen = this.checkServerStatus;
-        this.ws.onclose = this.handleWsClose;
-        this.ws.onerr = this.handleWsErr;
-        this.ws.onmessage = this.handleWsMsg;
+        window.ws = new WebSocket(WS_HOST)
+        window.ws.addEventListener("open", this.checkServerStatus)
+        window.ws.addEventListener("message", this.handleWsMsg)
+        window.ws.onclose = this.handleWsClose;
+        window.ws.onerr = this.handleWsErr;
     },
 
     componentDidMount() {},
@@ -51,7 +54,7 @@ const Entry = React.createClass({
     },
     handleWsMsg(msg) {
         let parsed = JSON.parse(msg.data);
-        parsed.type === "ping" && this.ws.send(JSON.stringify({type: "pong"}));
+        parsed.type === "ping" && window.ws.send(JSON.stringify({type: "pong"}));
         parsed.type === "status" && this.renderServers(parsed.apps)
         parsed.type === "disconnection" && this.handleAppDisconnection(parsed)
         parsed.type === "connection" && this.handleAppConnection(parsed)
@@ -60,7 +63,7 @@ const Entry = React.createClass({
     checkServerStatus() {
         console.log("Connected");
         this.retries = 0;
-        this.ws.send(JSON.stringify({type: "status"}))
+        window.ws.send(JSON.stringify({type: "status"}))
     },
 
     sortByPort(servers) { return servers.sort((a, b) => a.port - b.port) },
@@ -106,8 +109,10 @@ const Entry = React.createClass({
                 <h2>App Health</h2>
 
                 <div id="serverContainer">
+                    <Graph />
                     {servers}
                 </div>
+
             </div>
         );
     }

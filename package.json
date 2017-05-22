@@ -1,9 +1,10 @@
 {
     "name": "Monitor",
-    "version": "0.3.0",
+    "version": "0.1.0",
     "dependencies": {
         "request": "^2.79.0",
-        "roster": "https://bitbucket.org/JestrJ/roster.git#v0.1.0"
+        "roster": "https://bitbucket.org/JestrJ/roster.git#v0.1.0",
+        "consul": "^0.29.0"
     },
     "devDependencies": {
         "babel-core": "^6.22.1",
@@ -18,7 +19,8 @@
         "react": "^15.3.0",
         "react-dom": "^15.3.0",
         "style-loader": "^0.13.1",
-        "webpack": "^1.14.0"
+        "webpack": "^1.14.0",
+        "d3": "4.8.0"
     },
     "scripts": {
         "watch": "webpack --config='src/config/webpack.config.js' --progress --colors --watch",
