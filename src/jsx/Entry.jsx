@@ -5,7 +5,8 @@ import DOM from 'react-dom';
 import Header from "./Header.jsx";
 import Graph from "./Graph.jsx";
 
-window.ws = ""
+import WS from "../js/wsclient.js"
+window.ws = new WS();
 
 require("../style/Entry.less")
 
@@ -18,52 +19,22 @@ const Entry = React.createClass({
     },
 
     componentWillMount() {
-        this.defaultRetryTime = 15000
-        this.retries = 0;
-        this.maxRetries = 5;
-        this.connectWS();
-    },
-
-    connectWS() {
-        console.log("Connecting");
-        window.ws = new WebSocket(WS_HOST)
-        window.ws.addEventListener("open", this.checkServerStatus)
-        window.ws.addEventListener("message", this.handleWsMsg)
-        window.ws.onclose = this.handleWsClose;
-        window.ws.onerr = this.handleWsErr;
+        window.ws.on("open", this.checkServerStatus)
+        window.ws.on("message", this.handleWsMsg)
     },
 
     componentDidMount() {},
     componentWillUnmount() {},
 
-    handleWsClose(evt) {
-        console.log("Closed:", evt);
-        if(this.retries < this.maxRetries) {
-            console.log("Retrying connection " + (this.maxRetries - this.retries) + " more time(s)");
-            setTimeout(this.connectWS, this.defaultRetryTime * ++this.retries)
-        }
-        else { console.log("Server appears down"); }
-    },
-    handleWsErr(err) {
-        console.log("Err:", err);
-        if(this.retries < this.maxRetries) {
-            console.log("Retrying connection " + (this.maxRetries - this.retries) + " more time(s)");
-            setTimeout(this.connectWS, this.defaultRetryTime * ++this.retries)
-        }
-        else { console.log("Server appears down"); }
-    },
     handleWsMsg(msg) {
         let parsed = JSON.parse(msg.data);
-        parsed.type === "ping" && window.ws.send(JSON.stringify({type: "pong"}));
         parsed.type === "status" && this.renderServers(parsed.apps)
         parsed.type === "disconnection" && this.handleAppDisconnection(parsed)
         parsed.type === "connection" && this.handleAppConnection(parsed)
     },
 
     checkServerStatus() {
-        console.log("Connected");
-        this.retries = 0;
-        window.ws.send(JSON.stringify({type: "status"}))
+        window.ws.send({type: "status"})
     },
 
     sortByPort(servers) { return servers.sort((a, b) => a.port - b.port) },

@@ -5,15 +5,20 @@ const http = require("http");
 const RosterServer = require("roster").Server;
 const health = require("./health.js")
 
+// # IP Address of consul leader - Temp until better solution
+// #   like a call-in "as leader" etc.
 const CONSUL_LEADER = process.env.CONSUL_LEADER;
-const consul = require("consul")({host: CONSUL_LEADER})
+// const CONSUL_LEADER = "";
 
 let root = {
     name: "Root",
     children: []
 }
 
-let watchers = {}
+let datacenters = [];
+let nodes = [];
+let services = [];
+let fetching = false;
 
 // GENERAL NOTES:
 // Connections are stored in this.wss.clients
@@ -22,7 +27,8 @@ let watchers = {}
 // Setup
 let connectedPeers = [];
 // More aggressive at start for testing purposes
-const KEEP_ALIVE_INTERVAL = 1000 * 120 //120 seconds
+const KEEP_ALIVE_INTERVAL = 1000 * 60 //60 seconds
+const BROADCAST_INTERVAL = 1000 * 15 //15 seconds
 const TTL = 3 // 3 sets of pings and no pong, you dead
 const ROSTER_WS_PORT = 4001;
 
@@ -41,25 +47,21 @@ module.exports = {
         };
         this.registerEventHandlers();
         setInterval(this.startKeepAliveChecks.bind(this), KEEP_ALIVE_INTERVAL)
+        setInterval(this.checkCenters.bind(this), BROADCAST_INTERVAL)
         console.log("WSS running");
-        RosterServer.init(ROSTER_WS_PORT);
-        health.registerListeners(RosterServer);
-        health.attachWSConnection(this.wss)
-        // Also watch for data centers coming online too
-        consul.catalog.datacenters((err, res) => {
-            // console.log(res);
-            this.attachWatchers(res)
-        })
+        // RosterServer.init(ROSTER_WS_PORT);
+        // health.registerListeners(RosterServer);
+        // health.attachWSConnection(this.wss)
+
+        this.checkCenters()
     },
 
-    attachWatchers: function (dcs) {
-        dcs.forEach((dc) => {
-            let watch = consul.watch({method: consul.catalog.node.list, options: {dc: dc} })
-            watch.on("change", (data, res) => {
-                // console.log(data);
-                this.broadcastDataCenters()
-            })
-            watchers[dc] = watch
+    checkCenters: function () {
+        console.log("Check");
+        this.fetchConsulInfo()
+        .then(() => this.formTree(this.broadcastDataCenters.bind(this)))
+        .catch((e) => {
+            console.log("Problem fetching a: ", e);
         })
     },
 
@@ -69,7 +71,7 @@ module.exports = {
             this.canSend(client) && client.send(JSON.stringify({type: "ping"}))
             let peerInd = connectedPeers.findIndex((masterPeer) => masterPeer.wsId === clientId)
             let peer = connectedPeers[peerInd];
-            ++peer.pings && peer.pings > TTL && connectedPeers.splice(peerInd, 1)
+            peer && ++peer.pings && peer.pings > TTL && connectedPeers.splice(peerInd, 1)
         })
     },
 
@@ -94,7 +96,7 @@ module.exports = {
                 evt.type === "pong" && this.stilAlive(chatroom, evt, ws);
                 evt.type === "status" && this.getServerStatus(chatroom, evt, ws);
                 evt.type === "services" && this.checkDataCenters(chatroom, evt, ws);
-                // TODO: Create a "getLeader" call to get current consul leader for client
+                evt.type === "getLeader" && ws.send(JSON.stringify({type: "getLeader", msg: CONSUL_LEADER}))
             })
             ws.on("close", (evt) => {
                 let peerInd = connectedPeers.findIndex((masterPeer) => masterPeer.wsId === wsId)
@@ -113,87 +115,131 @@ module.exports = {
 
     canSend: function (ws) { return ws.readyState === 1 },
 
-    checkDataCenters: function (chatroom, evt, ws) {
-        let children = []
-        this.sendGet("/v1/catalog/datacenters", (dcs) => {
-            let lastDC = dcs.length
-            dcs.forEach((dc, ind) => {
-                let dcJson = { name: dc, children: [] }
-                this.sendGet(`/v1/catalog/nodes?dc=${dc}`, (nodes) => {
-                    let lastNode = nodes.length
-                    nodes.forEach((node, ind) => {
-                        this.sendGet(`/v1/catalog/node/${node.Node}?dc=${dc}`, (services) => {
-                            let nodeJson = {
-                                name: services.Node.Node,
-                                children: Object.keys(services.Services).map((key) => {
-                                    return { name: key, size: 1 }
-                                })
-                            }
+    fetchConsulInfo() {
+        if(fetching) { return Promise.reject("Already fetching") }
+        fetching = true;
+        return this.getDataCenters()
+        .then((dcs) => {
+            datacenters = dcs;
+            let nodePromises = datacenters.map((dc) => this.getNodes(dc))
+            return Promise.all(nodePromises)
+        })
+        .then((allNodes) => {
+            nodes = allNodes.reduce((acc, val) => acc.concat(val))
+            let concatNodes = allNodes.reduce((acc, val) => acc.concat(val))
+            let servicePromises = concatNodes.map((node) => this.getServices(node.Node, node.Datacenter))
+            return Promise.all(servicePromises)
+        })
+        .then((allServices) => {
+            // We're trying to not allow serviceNode to be null
+            // Most likely due to getting nodes from getNodes, but its being removed between getServices
+            services = allServices.filter((service) => service !== null)
+            let filteredServices = allServices.filter((service) => service !== null)
+            nodes.forEach((node) => {
+                let nodeServices = filteredServices.filter((serviceNode) => serviceNode.Node.ID === node.ID)[0].Services
+                node.Services = Object.keys(nodeServices)
+            })
+        })
+        .then(() => {
+            let checkPromises = nodes.map((node) => this.getChecks(node.Node, node.Datacenter))
+            return Promise.all(checkPromises)
+        })
+        .then((allChecks) => {
+            console.log(allChecks);
+            nodes.forEach((node) => {
+                node.Checks = allChecks.filter((nodeChecks) =>
+                    nodeChecks.every((check) => check.Node === node.Node)
+                ).reduce((acc, val) => acc.concat(val))
+            })
+            fetching = false;
+        })
+        .catch((e) => { fetching = false; console.log("CAUGHT:", e) })
+    },
 
-                            let nodePushed = dcJson.children.filter((node) => nodeJson.name === node.name)
-                            if(nodePushed.length === 0) { dcJson.children.push(nodeJson) }
-                            if(--lastNode === 0) {
-                                let dcPushed = children.filter((dc) => dcJson.name === dc.name)
-                                if(dcPushed.length === 0) { children.push(dcJson) }
-                                if(--lastDC === 0) {
-                                    root.children = children;
-                                    let response = { type: "services", root: root }
-                                    ws.send(JSON.stringify(response))
-                                }
-                            }
-                        })
-                    })
-                })
+    formTree(cb) {
+        let children = []
+        datacenters.forEach((dc, ind) => {
+            let dcJson = { name: dc, children: [] }
+            let filteredNodes = nodes.filter((node) => dc === node.Datacenter)
+            filteredNodes.forEach((node, ind) => {
+                // console.log(node);
+                if(!node.Services) { console.log("node is:", node); }
+                let nodeJson = {
+                    name: node.Node,
+                    services: node.Services.map((key) => { return { name: key, size: 1} }),
+                    checks: node.Checks
+                }
+                dcJson.children.push(nodeJson)
+            })
+            children.push(dcJson)
+        })
+        root.children = children;
+        cb();
+    },
+
+    // Used for tidy tree - not relevent with checks and services graph we're making now
+    // formTree(cb) {
+    //     let children = []
+    //     datacenters.forEach((dc, ind) => {
+    //         let dcJson = { name: dc, children: [] }
+    //         let filteredNodes = nodes.filter((node) => dc === node.Datacenter)
+    //         filteredNodes.forEach((node, ind) => {
+    //             let nodeJson = {
+    //                 name: node.Node,
+    //                 children: node.Services.map((key) => { return { name: key, size: 1} })
+    //             }
+    //             dcJson.children.push(nodeJson)
+    //         })
+    //         children.push(dcJson)
+    //     })
+    //     root.children = children;
+    //     cb();
+    // },
+
+    getDataCenters: function () {
+        return new Promise((resolve, reject) => {
+            this.sendGet("/v1/catalog/datacenters", (err, dcs) => {
+                if(err) { return reject(err) }
+                resolve(dcs)
+            })
+        })
+    },
+
+    getNodes: function (dc) {
+        return new Promise((resolve, reject) => {
+            this.sendGet(`/v1/catalog/nodes?dc=${dc}`, (err, machines) => {
+                if(err) { return reject(err) }
+                resolve(machines)
+            })
+        })
+    },
+    getServices: function (node, dc) {
+        return new Promise((resolve, reject) => {
+            this.sendGet(`/v1/catalog/node/${node}?dc=${dc}`, (err, services) => {
+                if(err) { return reject(err) }
+                resolve(services)
+            })
+        })
+    },
+    getChecks: function (node, dc) {
+        return new Promise((resolve, reject) => {
+            this.sendGet(`/v1/health/node/${node}?dc=${dc}`, (err, checks) => {
+                if(err) { return reject(err) }
+                resolve(checks)
             })
         })
     },
 
     broadcastDataCenters: function () {
-        let children = []
-        this.sendGet("/v1/catalog/datacenters", (dcs) => {
-            let lastDC = dcs.length
-            dcs.forEach((dc, ind) => {
-                let dcJson = { name: dc, children: [] }
-                this.sendGet(`/v1/catalog/nodes?dc=${dc}`, (nodes) => {
-                    let lastNode = nodes.length
-                    nodes.forEach((node, ind) => {
-                        this.sendGet(`/v1/catalog/node/${node.Node}?dc=${dc}`, (services) => {
-                            let nodeJson = {
-                                name: services.Node.Node,
-                                children: Object.keys(services.Services).map((key) => {
-                                    return { name: key, size: 1 }
-                                })
-                            }
-
-                            let nodePushed = dcJson.children.filter((node) => nodeJson.name === node.name)
-                            if(nodePushed.length === 0) { dcJson.children.push(nodeJson) }
-                            if(--lastNode === 0) {
-                                let dcPushed = children.filter((dc) => dcJson.name === dc.name)
-                                if(dcPushed.length === 0) { children.push(dcJson) }
-                                if(--lastDC === 0) {
-                                    root.children = children;
-                                    let response = { type: "services", root: root }
-                                    this.wss.broadcast(JSON.stringify(response))
-                                }
-                            }
-                        })
-                    })
-                })
-            })
-        })
+        let response = { type: "services", root: root }
+        this.wss.broadcast(JSON.stringify(response))
     },
 
-    // checkNodes: function () {
-    //     this.sendGet("/v1/catalog/nodes", (res) => {
-    //         console.log("Nodes:", res);
-    //     })
-    // },
-    //
-    // checkServices: function () {
-    //     this.sendGet("/v1/catalog/services", (res) => {
-    //         console.log("Services:", res);
-    //     })
-    // },
+    checkDataCenters: function (chatroom, evt, ws) {
+        let response = { type: "services", root: root }
+        ws.send(JSON.stringify(response))
+
+    },
 
     sendGet: function (url, callback) {
         let opts = {
@@ -208,10 +254,16 @@ module.exports = {
             res.on('data', (chunk) => {
                 response += chunk.toString();
             });
-            res.on('end', () => { callback(JSON.parse(response)) });
+            res.on('end', () => {
+                try { callback(null, JSON.parse(response)) }
+                catch(e) {
+                    fetching = false;
+                    console.log("Failed for: "+JSON.stringify(opts));
+                    callback(e)
+                }
+            });
         })
-
-        req.on("error", (e) => { console.log("ERR:", e) })
+        req.on("error", (e) => { fetching = false; console.log("ERR:", e) })
     },
 
 

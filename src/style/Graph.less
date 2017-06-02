@@ -49,6 +49,8 @@
         .dcName { display: flex; }
         .machineList {
             display: flex;
+            .passing { background: #b1fdb5; }
+            .critical { background: orange; }
             .machine {
                 display: flex;
                 flex-flow: column;
@@ -56,20 +58,39 @@
                 margin: 5px;
                 padding: 5px;
                 font-size: 12px;
-                background: #bad6ba;
                 .machineName { display: block; }
                 &:hover .hiddenServices {
-                    display:block;
+                    display:flex;
                     position:absolute;
                 }
                 .hiddenServices {
                     background: #b7b7b7;
                     display: none;
-                    .service {
+                    flex-direction: row;
+                    .services{
                         margin: 2px;
                         padding: 2px;
-                        background: #b1fdb5;
+                        flex-direction: column;
+                        display: flex;
+                        .service {
+                            margin: 2px;
+                            padding: 2px;
+                            background: #b1fdb5;
+                        }
                     }
+                    .checks{
+                        margin: 2px;
+                        padding: 2px;
+                        flex-direction: column;
+                        display: flex;
+                        .passing { background: #b1fdb5; }
+                        .critical { background: orange; }
+                        .check {
+                            margin: 2px;
+                            padding: 2px;
+                        }
+                    }
+
                 }
 
             }

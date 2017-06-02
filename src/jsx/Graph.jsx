@@ -7,33 +7,34 @@ require("../style/Graph.less")
 
 const myjson = require("../js/sample.js")
 
-const CONSUL_LEADER = "192.34.59.186"
-
 const Graph = React.createClass({
 
     getInitialState() {
         return {
-            // root: {
-            //     children: []
-            // }
-            root: myjson
+            root: {
+                children: []
+            },
+            leader: ""
+            // root: myjson
         };
     },
 
     componentDidMount() {
-        window.ws.addEventListener("open", this.checkDataCenters)
-        window.ws.addEventListener("message", this.handleWsMsg)
-        this.state.root && this.createTidyTree(this.state.root)
+        window.ws.on("message", this.handleWsMsg)
+        window.ws.on("open", this.checkDataCenters)
+        // this.state.root && this.createTidyTree(this.state.root)
     },
 
     checkDataCenters() {
-        window.ws.send(JSON.stringify({type: "services"}))
+        window.ws.send({type: "services"})
+        window.ws.send({type: "getLeader"})
     },
 
     handleWsMsg(msg) {
         let parsed = JSON.parse(msg.data);
-        parsed.type === "services" && this.createTidyTree(parsed.root)
+        // parsed.type === "services" && this.createTidyTree(parsed.root)
         parsed.type === "services" && this.setState({root: parsed.root})
+        parsed.type === "getLeader" && this.setState({leader: parsed.msg})
     },
 
     createTidyTree(rootJson) {
@@ -100,14 +101,25 @@ const Graph = React.createClass({
             // console.log("dc", dc);
             let machines = dc.children.map((machine, ind) => {
                 // console.log("machine", machine);
-                let services = machine.children.map((service, ind) => {
-                    // console.log("service:", service);
+                let services = machine.services.map((service, ind) => {
                     return (<div className="service" key={ind}>{service.name}</div>)
                 })
+                let checks = machine.checks.map((check, ind) => {
+                    let status = check.ServiceID === "swarmCount"
+                        ? check.Output
+                        : check.Status
+                    return (<div className={`check ${check.Status}` } key={ind}>{check.Name}: {status}</div>)
+                })
+                let machineStatus = machine.checks.every((check) => check.Status === "passing")
+                let machineHealth = machineStatus ? "passing" : "critical"
+
                 return (
-                    <div className="machine"key={ind} onMouseMove={this.adjustToolTip}>
+                    <div className={`machine ${machineHealth}`} key={ind} onMouseMove={this.adjustToolTip}>
                         <div className="machineName">{machine.name}</div>
-                        <div className="hiddenServices">{services}</div>
+                        <div className="hiddenServices">
+                            <div className="services">Services: {services}</div>
+                            <div className="checks">Checks: {checks}</div>
+                        </div>
                     </div>
                 )
             })
@@ -123,7 +135,7 @@ const Graph = React.createClass({
 
         return (
             <div id="component-graphs">
-                <a href={`http://${CONSUL_LEADER}:8500/ui`} target="_blank">Consul UI</a>
+                <a href={`http://${this.state.leader}:8500/ui`} target="_blank">Consul UI</a>
                 {dataCenters}
                 <svg id="tidytree" width="900" height="670"></svg>
             </div>

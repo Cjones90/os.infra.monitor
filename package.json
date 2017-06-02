@@ -3,7 +3,6 @@
     "version": "0.1.0",
     "dependencies": {
         "request": "^2.79.0",
-        "roster": "https://bitbucket.org/JestrJ/roster.git#v0.1.0",
         "consul": "^0.29.0"
     },
     "devDependencies": {

@@ -2,7 +2,7 @@ version: "3"
 services:
     main:
         build: .
-        image: reeregistry-on.azurecr.io/monitor:0.3.0
+        image: jestrr/monitor:0.4.0
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         volumes:
             - ./src:/home/app/src
@@ -26,8 +26,6 @@ services:
             PUB_FILES: ./pub/
             BIN: ./server/bin/
             OUTPUT_FILES: ./server/output/
-
-            # IP Address of consul leader - Temp until better solution
-            #   like a call-in "as leader" etc.
-            CONSUL_LEADER: "192.34.59.186"
-            # Also need to edit the IP in src/jsx/Graph.jsx until a more perm solution
+            SERVICE_NAME: Monitor
+            SERVICE_PORT: "4040"
+            CONSUL_LEADER: 111.111.111.111 # Change

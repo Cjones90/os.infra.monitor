@@ -7,6 +7,7 @@ const path = require("path");
 
 const routes = require("./routes.js");
 const ws = require("./ws.js");
+const service = require("./service.js");
 
 const PUB_FILES = process.env.PUB_FILES;
 const OUTPUT_FILES = process.env.OUTPUT_FILES
@@ -57,7 +58,9 @@ const server = {
         // TODO: Should look into having only one WSS server running, seperating out
         // web clients and apps
         ws.init(httpServer);
+        service.register()
     }
+
 }
 
 module.exports = server;
