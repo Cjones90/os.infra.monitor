@@ -2,7 +2,7 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/monitor:0.4.1
+        image: jestrr/monitor:0.4.2
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         # volumes:
         #     - ./src:/home/app/src
@@ -27,5 +27,5 @@ services:
             BIN: ./server/bin/
             OUTPUT_FILES: ./server/output/
             SERVICE_NAME: Monitor
-            SERVICE_PORT: "4040"
-            CONSUL_LEADER: localhost # Change
+            SERVICE_PORT: 4040
+            CONSUL_LEADER: 172.17.0.1 # Change

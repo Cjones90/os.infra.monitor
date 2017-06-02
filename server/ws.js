@@ -2,7 +2,6 @@
 
 const WebSocket = require("ws");
 const http = require("http");
-const RosterServer = require("roster").Server;
 const health = require("./health.js")
 
 // # IP Address of consul leader - Temp until better solution
@@ -84,7 +83,8 @@ module.exports = {
     },
 
     registerEventHandlers: function() {
-        this.wss.on("connection", (ws) => {
+        this.wss.on("connection", (ws, req) => {
+            ws.upgradeReq = req
             let wsId = ws.upgradeReq.headers['sec-websocket-key'];
             ws.send(JSON.stringify({type: "id", msg: wsId}))
             connectedPeers.push({wsId: wsId, pings: 0});

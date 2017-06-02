@@ -15,13 +15,12 @@ module.exports = {
                 "v1"
             ],
             "Address": "127.0.0.1",
-            "Port": SERVICE_PORT,
+            "Port": +SERVICE_PORT,
             "EnableTagOverride": false,
             "Check": {
-                "DeregisterCriticalServiceAfter": "1m",
+                "DeregisterCriticalServiceAfter": "5m",
                 "HTTP": `http://localhost:${SERVICE_PORT}`,
-                "Interval": "10s",
-                "TTL": "15s"
+                "Interval": "10s"
             }
         }
 
