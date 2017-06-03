@@ -34,7 +34,7 @@ const Entry = React.createClass({
     },
 
     checkServerStatus() {
-        window.ws.send({type: "status"})
+        // window.ws.send({type: "status"})
     },
 
     sortByPort(servers) { return servers.sort((a, b) => a.port - b.port) },

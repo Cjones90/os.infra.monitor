@@ -17,41 +17,28 @@ const PORT = 4000;
 const server = {
     startServer: function () {
         let httpServer = http.createServer((req, res) => {
-            let extname = path.extname(url.parse(req.url).pathname);
-            let file = (url.parse(req.url).pathname).slice(1, this.length);
-            if(req.url.indexOf('/api/') > -1) {
-                //     CHECK HERE IF USER IS AUTHENTICATED
-                routes(req, res);
-            }
-            else if(extname === '.xls') {
-                let stream = fs.readFileSync(OUTPUT_FILES+file, 'binary');
-                let stat = fs.statSync(OUTPUT_FILES+file)
-                res.setHeader('Content-Length', stat.size);
-                res.setHeader('Content-Type', 'application/vnd.ms-excel');
-                res.setHeader('Content-Disposition', 'attachment; filename='+path.basename(OUTPUT_FILES+file));
-                res.setHeader('Access-Control-Allow-Origin', '*');
-                res.write(stream, 'binary')
-                res.end('');
-            }
+            if(req.url.indexOf('/api/') > -1) { routes(req, res); }
             else {
-                let contentType = '';
-                file = PUB_FILES+file;
-                switch(extname) {
-                    case ".js": contentType = "text/javascript";
-                    break;
-                    case ".ico": contentType = "image/x-icon";
-                    break;
-                    case ".html": contentType = "text/html";
-                    break;
-                    case ".tsv": contentType = "text/tsv";
-                        file = BIN+file;
-                    break;
-                    default: contentType = "text/html";
-                        file = PUB_FILES+"index.html";
-                }
+                let extname = path.extname(url.parse(req.url).pathname);
+                let file = (url.parse(req.url).pathname).slice(1, this.length);
+                let contentType = 'text/html';
+                let filePath = PUB_FILES+"index.html"
+
+                if(extname === ".datagz") { contentType = "text/javascript"; filePath = PUB_FILES+file }
+                if(extname === ".memgz") { contentType = "text/javascript"; filePath = PUB_FILES+file }
+                if(extname === ".jsgz") { contentType = "text/javascript"; filePath = PUB_FILES+file }
+                if(extname === ".js") { contentType = "text/javascript"; filePath = PUB_FILES+file }
+                if(extname === ".ico") { contentType = "image/x-icon"; filePath = PUB_FILES+file }
+                if(extname === ".png") { contentType = "image/png"; filePath = PUB_FILES+file }
+                if(extname === ".css") { contentType = "text/css"; filePath = PUB_FILES+file }
+                if(extname === ".tsv") { contentType = "text/tsv"; filePath = BIN+file }
+                if(extname === ".xls") { contentType = "application/vnd.ms-excel"; filePath = OUTPUT_FILES+file }
+
+                extname.indexOf("gz") > -1 && res.setHeader("Content-Encoding", "gzip");
+                extname.indexOf("xls") > -1 && res.setHeader('Content-Disposition', 'attachment; filename='+path.basename(OUTPUT_FILES+file));
 
                 res.writeHead(200, {"Content-Type": contentType});
-                res.end(fs.readFileSync(file));
+                fs.readFile(filePath, (err, data) => res.end(data))
             }
         }).listen(PORT);
         console.log("Server running")

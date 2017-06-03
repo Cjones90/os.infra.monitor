@@ -26,6 +26,6 @@ services:
             PUB_FILES: ./pub/
             BIN: ./server/bin/
             OUTPUT_FILES: ./server/output/
-            SERVICE_NAME: Monitor
+            SERVICE_NAME: monitor
             SERVICE_PORT: 4040
             CONSUL_LEADER: 172.17.0.1 # Change

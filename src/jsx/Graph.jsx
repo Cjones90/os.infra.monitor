@@ -96,16 +96,13 @@ const Graph = React.createClass({
     render () {
 
         // <svg id="tidytree" width="900" height="670"></svg>
-        // console.log(this.state.root);
         let dataCenters = this.state.root.children.map((dc, ind) => {
-            // console.log("dc", dc);
             let machines = dc.children.map((machine, ind) => {
-                // console.log("machine", machine);
                 let services = machine.services.map((service, ind) => {
                     return (<div className="service" key={ind}>{service.name}</div>)
                 })
                 let checks = machine.checks.map((check, ind) => {
-                    let status = check.ServiceID === "swarmCount"
+                    let status = check.ServiceID === "swarmCount" || check.CheckID === "service:monitor:2"
                         ? check.Output
                         : check.Status
                     return (<div className={`check ${check.Status}` } key={ind}>{check.Name}: {status}</div>)
@@ -115,7 +112,11 @@ const Graph = React.createClass({
 
                 return (
                     <div className={`machine ${machineHealth}`} key={ind} onMouseMove={this.adjustToolTip}>
-                        <div className="machineName">{machine.name}</div>
+                        <div className="machineName">
+                            Node: <strong>{machine.name}</strong>
+                            <br />
+                            Addr: <strong>{machine.address}</strong>
+                        </div>
                         <div className="hiddenServices">
                             <div className="services">Services: {services}</div>
                             <div className="checks">Checks: {checks}</div>

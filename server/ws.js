@@ -6,8 +6,12 @@ const health = require("./health.js")
 
 // # IP Address of consul leader - Temp until better solution
 // #   like a call-in "as leader" etc.
-const CONSUL_LEADER = process.env.CONSUL_LEADER;
-// const CONSUL_LEADER = "";
+const CONSUL_LEADER = process.env.CONSUL_LEADER
+let leaderAddr = CONSUL_LEADER;
+
+if(leaderAddr.indexOf("//") > -1) {
+    leaderAddr = leaderAddr.split("//")[1].split(":")[0];
+}
 
 let root = {
     name: "Root",
@@ -145,7 +149,6 @@ module.exports = {
             return Promise.all(checkPromises)
         })
         .then((allChecks) => {
-            console.log(allChecks);
             nodes.forEach((node) => {
                 node.Checks = allChecks.filter((nodeChecks) =>
                     nodeChecks.every((check) => check.Node === node.Node)
@@ -167,7 +170,8 @@ module.exports = {
                 let nodeJson = {
                     name: node.Node,
                     services: node.Services.map((key) => { return { name: key, size: 1} }),
-                    checks: node.Checks
+                    checks: node.Checks,
+                    address: node.Address
                 }
                 dcJson.children.push(nodeJson)
             })
@@ -242,11 +246,14 @@ module.exports = {
     },
 
     sendGet: function (url, callback) {
+        let host = CONSUL_LEADER.indexOf("//") > -1
+            ? "172.17.0.1"
+            : leaderAddr
         let opts = {
             method: "GET",
             port: "8500",
             path: `${url}`,
-            hostname: CONSUL_LEADER
+            hostname: host
         }
         let response = "";
         let req = http.get(opts, (res) => {
