@@ -4,9 +4,9 @@ services:
         build: .
         image: jestrr/monitor:0.4.2
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
-        # volumes:
-        #     - ./src:/home/app/src
-        #     - ./server:/home/app/server
+        volumes:
+            - ./src:/home/app/src
+            - ./server:/home/app/server
             # - ./pub:/home/app/pub
         deploy:
             replicas: 1
@@ -26,6 +26,11 @@ services:
             PUB_FILES: ./pub/
             BIN: ./server/bin/
             OUTPUT_FILES: ./server/output/
+
+            CONSUL_LEADER: 172.17.0.1 # Change
+
+            # Consul
             SERVICE_NAME: monitor
             SERVICE_PORT: 4040
-            CONSUL_LEADER: 172.17.0.1 # Change
+            REGISTER_SERVICE: "false"
+            IMAGE_VER: 0.4.2

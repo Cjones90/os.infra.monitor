@@ -11,6 +11,7 @@ const service = require("./service.js");
 
 const PUB_FILES = process.env.PUB_FILES;
 const OUTPUT_FILES = process.env.OUTPUT_FILES
+const REGISTER_SERVICE = JSON.parse(process.env.REGISTER_SERVICE)
 const BIN = process.env.BIN;
 const PORT = 4000;
 
@@ -45,7 +46,7 @@ const server = {
         // TODO: Should look into having only one WSS server running, seperating out
         // web clients and apps
         ws.init(httpServer);
-        service.register()
+        if(REGISTER_SERVICE) { service.register(); }
     }
 
 }
