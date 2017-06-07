@@ -20,3 +20,4 @@ Check `HOST` under `HOST:CONTAINER` in `docker-compose.yml` for port (default 80
 If using with consul, set `REGISTER_SERVICE` to `"true"`  
 Modify `SERVICE_NAME` and `SERVICE_PORT`  
 `IMAGE_VER` should be the version of the docker image being used  
+If you only care if the service is up and not down, set `DEREGISTER_ON_EXIT` to `"true"`
