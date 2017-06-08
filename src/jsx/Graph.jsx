@@ -102,7 +102,7 @@ const Graph = React.createClass({
                     return (<div className="service" key={ind}>{service.name}</div>)
                 })
                 let checks = machine.checks.map((check, ind) => {
-                    let status = check.CheckID.match(/service:\w+:2/)
+                    let status = check.CheckID.match(/service:/)
                         ? check.Output
                         : check.Status
                     return (<div className={`check ${check.Status}` } key={ind}>{check.Name}: {status}</div>)
