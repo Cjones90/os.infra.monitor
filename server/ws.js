@@ -100,6 +100,7 @@ module.exports = {
                 evt.type === "pong" && this.stilAlive(chatroom, evt, ws);
                 evt.type === "status" && this.getServerStatus(chatroom, evt, ws);
                 evt.type === "services" && this.checkDataCenters(chatroom, evt, ws);
+                evt.type === "updateCenters" && this.checkCenters();
                 evt.type === "getLeader" && ws.send(JSON.stringify({type: "getLeader", msg: CONSUL_LEADER}))
             })
             ws.on("close", (evt) => {

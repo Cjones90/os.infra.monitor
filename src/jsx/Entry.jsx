@@ -4,40 +4,56 @@ import React from 'react';
 import DOM from 'react-dom';
 import Header from "./Header.jsx";
 import Graph from "./Graph.jsx";
+import SidePanel from "./SidePanel.jsx"
 
 import WS from "../js/wsclient.js"
 window.ws = new WS();
 
 require("../style/Entry.less")
 
-const Entry = React.createClass({
+class Entry extends React.Component {
 
-    getInitialState() {
-        return {
-            servers: []
-        };
-    },
+    constructor(props) {
+        super(props)
+        this.state = {
+            servers: [],
+            machine: {
+                name: "",
+                address: "",
+                services: [],
+                checks: []
+            }
+        }
+        this.handleWsMsg = this.handleWsMsg.bind(this)
+        this.checkServerStatus = this.checkServerStatus.bind(this)
+        this.sortByPort = this.sortByPort.bind(this)
+        this.handleAppDisconnection = this.handleAppDisconnection.bind(this)
+        this.handleAppConnection = this.handleAppConnection.bind(this)
+        this.renderServers = this.renderServers.bind(this)
+        // this.passMachine = this.passMachine.bind(this)
+    }
+
 
     componentWillMount() {
         window.ws.on("open", this.checkServerStatus)
         window.ws.on("message", this.handleWsMsg)
-    },
+    }
 
-    componentDidMount() {},
-    componentWillUnmount() {},
+    componentDidMount() {}
+    componentWillUnmount() {}
 
     handleWsMsg(msg) {
         let parsed = JSON.parse(msg.data);
         parsed.type === "status" && this.renderServers(parsed.apps)
         parsed.type === "disconnection" && this.handleAppDisconnection(parsed)
         parsed.type === "connection" && this.handleAppConnection(parsed)
-    },
+    }
 
     checkServerStatus() {
         // window.ws.send({type: "status"})
-    },
+    }
 
-    sortByPort(servers) { return servers.sort((a, b) => a.port - b.port) },
+    sortByPort(servers) { return servers.sort((a, b) => a.port - b.port) }
 
     handleAppDisconnection(app) {
         this.state.servers.forEach((server) =>
@@ -45,7 +61,7 @@ const Entry = React.createClass({
         )
         this.sortByPort(this.state.servers)
         this.setState({ })
-    },
+    }
 
     handleAppConnection(app) {
         let servers = this.state.servers
@@ -53,11 +69,15 @@ const Entry = React.createClass({
         if(serverIndex === -1) { servers.push(app) }
         if(serverIndex > -1) { servers.splice(serverIndex, 1) && servers.push(app) }
         this.setState({ servers: this.sortByPort(servers) })
-    },
+    }
 
     renderServers(servers) {
         this.setState({ servers: this.sortByPort(servers) })
-    },
+    }
+
+    // passMachine(e) {
+    //     this.setState({machine: e})
+    // }
 
     render() {
 
@@ -80,7 +100,8 @@ const Entry = React.createClass({
                 <h2>App Health</h2>
 
                 <div id="serverContainer">
-                    <Graph />
+                    <Graph passMachine={(e) => this.setState({machine: e})}/>
+                    <SidePanel machine={this.state.machine}/>
                     {servers}
                 </div>
 
@@ -88,6 +109,6 @@ const Entry = React.createClass({
         );
     }
 
-});
+}
 
 DOM.render(<Entry />, document.getElementById("main"))

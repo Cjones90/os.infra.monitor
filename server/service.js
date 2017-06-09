@@ -49,6 +49,25 @@ module.exports = {
         req.on("error", (e) => { console.log("ERR:", e) })
         req.end(JSON.stringify(serviceToRegister))
 
+    },
+
+    deregister: function(service, ip, respond) {
+        console.log("Deregistering "+service);
+        let opts = {
+            method: "PUT",
+            port: consulAPIPort,
+            path: `/v1/agent/service/deregister/${service}`,
+            hostname: ip
+        }
+        let response = "";
+        let req = http.request(opts, (res) => {
+            res.setEncoding('utf8');
+            res.on('data', (chunk) => { response += chunk.toString(); });
+            res.on('end', () => { console.log("res:", response); respond(response) });
+            res.on('error', () => { console.log("err:", response); });
+        })
+        req.on("error", (e) => { console.log("ERR:", e) })
+        req.end()
     }
 
 }

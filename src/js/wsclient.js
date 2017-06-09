@@ -40,10 +40,10 @@ export default class WS {
 
     handleWsClose(evt) {
         console.log("Closed:", evt);
+        this.connecting = false;
         if(this.retries < this.maxRetries) {
-            this.connecting = false;
             console.log("Retrying connection " + (this.maxRetries - this.retries) + " more time(s)");
-            setTimeout(this.connect.bind(this, true), this.defaultRetryTime * ++this.retries)
+            setTimeout(this.connect.bind(this, true), (this.defaultRetryTime * ++this.retries))
         }
         else { console.log("Server appears down"); }
     }
@@ -51,9 +51,8 @@ export default class WS {
     handleWsErr(err) {
         console.log("Err:", err);
         if(this.retries < this.maxRetries) {
-            this.connecting = false;
             console.log("Retrying connection " + (this.maxRetries - this.retries) + " more time(s)");
-            setTimeout(this.connect.bind(this, true), this.defaultRetryTime * ++this.retries)
+            setTimeout(this.connect.bind(this, true), (this.defaultRetryTime * ++this.retries))
         }
         else { console.log("Server appears down"); }
     }

@@ -7,35 +7,53 @@ require("../style/Graph.less")
 
 const myjson = require("../js/sample.js")
 
-const Graph = React.createClass({
+class Graph extends React.Component {
 
-    getInitialState() {
-        return {
+    constructor(props) {
+        super(props)
+        this.state = {
             root: {
                 children: []
             },
             leader: ""
             // root: myjson
-        };
-    },
+        }
+        this.checkDataCenters = this.checkDataCenters.bind(this);
+        this.handleWsMsg = this.handleWsMsg.bind(this);
+        this.createTidyTree = this.createTidyTree.bind(this);
+        this.adjustToolTip = this.adjustToolTip.bind(this);
+        this.selectMachine = this.selectMachine.bind(this);
+        this.passMachine = props.passMachine.bind(this);
+
+        this.selectedMachine = "";
+    }
 
     componentDidMount() {
         window.ws.on("message", this.handleWsMsg)
         window.ws.on("open", this.checkDataCenters)
         // this.state.root && this.createTidyTree(this.state.root)
-    },
+    }
 
     checkDataCenters() {
         window.ws.send({type: "services"})
         window.ws.send({type: "getLeader"})
-    },
+    }
 
     handleWsMsg(msg) {
         let parsed = JSON.parse(msg.data);
         // parsed.type === "services" && this.createTidyTree(parsed.root)
-        parsed.type === "services" && this.setState({root: parsed.root})
+        parsed.type === "services" && this.handleServices(parsed.root)
         parsed.type === "getLeader" && this.setState({leader: parsed.msg})
-    },
+    }
+
+    handleServices(root) {
+        let updatedMachine = root.children[0].children.filter((machine) => {
+            return machine.name === this.selectedMachine
+        })
+        updatedMachine.length && this.selectMachine(updatedMachine[0])
+        this.setState({root: root})
+
+    }
 
     createTidyTree(rootJson) {
         d3.select("#tidytree").selectAll("*").remove();
@@ -81,7 +99,7 @@ const Graph = React.createClass({
               + " " + (d.parent.y + 100) + "," + d.parent.x
               + " " + d.parent.y + "," + d.parent.x;
         }
-    },
+    }
 
     adjustToolTip(e) {
         let tooltips = document.querySelectorAll('.hiddenServices');
@@ -91,7 +109,12 @@ const Graph = React.createClass({
             tooltips[i].style.top = y;
             tooltips[i].style.left = x;
         }
-    },
+    }
+
+    selectMachine(e) {
+        this.selectedMachine = e.name
+        this.passMachine(e)
+    }
 
     render () {
 
@@ -102,6 +125,7 @@ const Graph = React.createClass({
                     return (<div className="service" key={ind}>{service.name}</div>)
                 })
                 let checks = machine.checks.map((check, ind) => {
+                    // console.log(check);
                     let status = check.CheckID.match(/service:/)
                         ? check.Output
                         : check.Status
@@ -111,7 +135,8 @@ const Graph = React.createClass({
                 let machineHealth = machineStatus ? "passing" : "critical"
 
                 return (
-                    <div className={`machine ${machineHealth}`} key={ind} onMouseMove={this.adjustToolTip}>
+                    <div className={`machine ${machineHealth}`} key={ind} onMouseMove={this.adjustToolTip}
+                        onClick={this.selectMachine.bind(this, machine)}>
                         <div className="machineName">
                             Node: <strong>{machine.name}</strong>
                             <br />
@@ -130,18 +155,20 @@ const Graph = React.createClass({
                     <div className="machineList">
                         {machines}
                     </div>
+
                 </div>
             )
         })
 
+        // <svg id="tidytree" width="900" height="670"></svg>
         return (
             <div id="component-graphs">
                 <a href={`http://${this.state.leader}:8500/ui`} target="_blank">Consul UI</a>
                 {dataCenters}
-                <svg id="tidytree" width="900" height="670"></svg>
+
             </div>
         )
     }
-})
+}
 
 export default Graph

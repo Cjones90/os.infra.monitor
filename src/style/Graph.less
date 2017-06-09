@@ -1,8 +1,15 @@
+// @passing: #b1fdb5;
+// @critical: orange;
+@passing: #529255;
+@critical: #bb723a;
 
 #component-graphs {
 
+    display: flex;
+    flex: 3;
+
     svg {
-        border: "black";
+        border: "white";
     }
 
     #tidytree {
@@ -43,14 +50,17 @@
 
 
     .dataCenter {
-        border: 1px solid black;
+        display: flex;
+        flex-flow: column wrap;
+        flex: 1;
+        border: 1px solid white;
         padding: 5px;
         margin: 15px;
         .dcName { display: flex; }
         .machineList {
             display: flex;
-            .passing { background: #b1fdb5; }
-            .critical { background: orange; }
+            .passing { background: @passing; }
+            .critical { background: @critical; }
             .machine {
                 display: flex;
                 flex-flow: column;
@@ -58,15 +68,19 @@
                 margin: 5px;
                 padding: 5px;
                 font-size: 12px;
+                border-radius: 5px;
                 .machineName { display: block; }
+                &:hover { cursor: pointer; }
                 &:hover .hiddenServices {
                     display:flex;
                     position:absolute;
                 }
                 .hiddenServices {
-                    background: #b7b7b7;
+                    // background: #b7b7b7;
+                    background: #757575;
                     display: none;
                     flex-direction: row;
+                    border-radius: 5px;
                     .services{
                         margin: 2px;
                         padding: 2px;
@@ -75,7 +89,9 @@
                         .service {
                             margin: 2px;
                             padding: 2px;
-                            background: #b1fdb5;
+                            background: @passing;
+                            border-radius: 5px;
+                            padding: 2px;
                         }
                     }
                     .checks{
@@ -83,10 +99,12 @@
                         padding: 2px;
                         flex-direction: column;
                         display: flex;
-                        .passing { background: #b1fdb5; }
-                        .critical { background: orange; }
+                        .passing { background: @passing; }
+                        .critical { background: @critical; }
                         .check {
+                            border-radius: 5px;
                             margin: 2px;
+                            padding: 2px;
                             padding: 2px;
                         }
                     }

@@ -3,6 +3,7 @@
 const fs = require("fs");
 
 const health = require("./health.js");
+const service = require("./service.js");
 
 const routes = function (req, res) {
 
@@ -21,21 +22,35 @@ const routes = function (req, res) {
 
     req.on('end', () => {
         let parsed = input ? JSON.parse(input) : "";
+        console.log(req.url, parsed);
+        switch(req.url) {
+            case "/api/put/deregisterService": service.deregister(parsed.service, parsed.ip, respond);
+            break;
+            default: respond();
+        }
 
-        if(req.url.indexOf('/api/get/') > -1) {
-            switch(req.url) {
-                case "/": respond();
-                break;
-                default: respond();
-            }
-        }
-        else {
-            switch(req.url) {
-                case "/": ;
-                break;
-                default: respond();
-            }
-        }
+        // if(req.url.indexOf('/api/get/') > -1) {
+        //     switch(req.url) {
+        //         case "/": respond();
+        //         break;
+        //         default: respond();
+        //     }
+        // }
+        // else if(req.url.indexOf('/api/put/') > -1) {
+        //     switch(req.url) {
+        //         case "/": respond();
+        //         break;
+        //         default: respond();
+        //     }
+        // }
+        // else if(req.url.indexOf('/api/post/') > -1) {
+        //     switch(req.url) {
+        //         case "/": respond();
+        //         break;
+        //         default: respond();
+        //     }
+        // }
+        // else { respond(); }
 
     })
 
