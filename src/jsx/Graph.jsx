@@ -125,7 +125,6 @@ class Graph extends React.Component {
                     return (<div className="service" key={ind}>{service.name}</div>)
                 })
                 let checks = machine.checks.map((check, ind) => {
-                    // console.log(check);
                     let status = check.CheckID.match(/service:/)
                         ? check.Output
                         : check.Status
