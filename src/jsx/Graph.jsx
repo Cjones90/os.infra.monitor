@@ -103,8 +103,8 @@ class Graph extends React.Component {
 
     adjustToolTip(e) {
         let tooltips = document.querySelectorAll('.hiddenServices');
-        let x = (e.clientX + 10) + 'px',
-            y = (e.clientY + 10) + 'px';
+        let x = (e.clientX + -200) + 'px',
+            y = (e.clientY + 20) + 'px';
         for (let i = 0; i < tooltips.length; i++) {
             tooltips[i].style.top = y;
             tooltips[i].style.left = x;
@@ -119,11 +119,14 @@ class Graph extends React.Component {
     render () {
 
         // <svg id="tidytree" width="900" height="670"></svg>
+        let allServices = [];
         let dataCenters = this.state.root.children.map((dc, ind) => {
             let machines = dc.children.map((machine, ind) => {
+                machine.services.forEach((s) => allServices.push(s))
                 let services = machine.services.map((service, ind) => {
                     return (<div className="service" key={ind}>{service.name}</div>)
                 })
+                let numServices = machine.services.length;
                 let checks = machine.checks.map((check, ind) => {
                     let status = check.CheckID.match(/service:/)
                         ? check.Output
@@ -140,6 +143,8 @@ class Graph extends React.Component {
                             Node: <strong>{machine.name}</strong>
                             <br />
                             Addr: <strong>{machine.address}</strong>
+                            <br />
+                            Services: <strong>{numServices}</strong>
                         </div>
                         <div className="hiddenServices">
                             <div className="services">Services: {services}</div>
@@ -159,10 +164,32 @@ class Graph extends React.Component {
             )
         })
 
+        let uniqueServices = allServices.filter((service, ind) => {
+            let indexOfFirstOccurance = allServices.findIndex((s) => service.name === s.name)
+            return indexOfFirstOccurance === ind
+        }).sort((a, b) => a.port > b.port)
+
+        let displayServices = uniqueServices.map((service, ind) => {
+            return (
+                <div className={`service`} key={ind}>
+                    <span className={"name"}>{service.name}:</span>
+                    <span className={"port"}>{service.port}</span>
+                </div>
+            )
+        })
+
         // <svg id="tidytree" width="900" height="670"></svg>
         return (
             <div id="component-graphs">
-                <a href={`http://${this.state.leader}:8500/ui`} target="_blank">Consul UI</a>
+                <div className={`serviceContainer`}>
+                    <a href={`http://${this.state.leader}:8500/ui`} target="_blank">Consul UI</a>
+                    <br/>
+                    <div className={"header"}>
+                        <span>Service:</span>
+                        <span>Port:</span>
+                    </div>
+                    {displayServices}
+                </div>
                 {dataCenters}
 
             </div>

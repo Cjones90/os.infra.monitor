@@ -48,6 +48,24 @@
         }
     }
 
+    .serviceContainer {
+        // text-align: center;
+        width: 25%;
+        border: 1px solid white;
+        margin: 3px;
+        .header > span:first-of-type {
+            width: 75%; 
+            display: inline-block;
+        }
+        .service {
+            border: 1px solid white;
+            margin: 3px;
+            background: #529255;
+            .name, .port { display: inline-block;}
+            .name { width: 75%; }
+            // .port { width: 10%; }
+        }
+    }
 
     .dataCenter {
         display: flex;
@@ -59,12 +77,14 @@
         .dcName { display: flex; }
         .machineList {
             display: flex;
+            flex-flow: row wrap;
             .passing { background: @passing; }
             .critical { background: @critical; }
             .machine {
                 display: flex;
                 flex-flow: column;
                 flex: 1;
+                min-width: 20%;
                 margin: 5px;
                 padding: 5px;
                 font-size: 12px;

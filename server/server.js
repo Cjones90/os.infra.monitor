@@ -26,6 +26,7 @@ const server = {
                     ".datagz": "text/javascript",
                     ".memgz": "text/javascript",
                     ".jsgz": "text/javascript",
+                    ".json": "text/javascript",
                     ".js": "text/javascript",
                     ".ico": "text/x-icon",
                     ".png": "text/png",

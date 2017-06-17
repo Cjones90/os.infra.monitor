@@ -141,8 +141,10 @@ module.exports = {
             services = allServices.filter((service) => service !== null)
             let filteredServices = allServices.filter((service) => service !== null)
             nodes.forEach((node) => {
-                let nodeServices = filteredServices.filter((serviceNode) => serviceNode.Node.ID === node.ID)[0].Services
-                node.Services = Object.keys(nodeServices)
+                let matchedServices = filteredServices.filter((serviceNode) => serviceNode.Node.ID === node.ID)[0].Services
+                node.Services = Object.keys(matchedServices).length > 0
+                    ? Object.keys(matchedServices).map((service) => { return {name: service, port: matchedServices[service].Port} })
+                    : []
             })
         })
         .then(() => {
@@ -166,11 +168,10 @@ module.exports = {
             let dcJson = { name: dc, children: [] }
             let filteredNodes = nodes.filter((node) => dc === node.Datacenter)
             filteredNodes.forEach((node, ind) => {
-                // console.log(node);
-                if(!node.Services) { console.log("node is:", node); }
                 let nodeJson = {
                     name: node.Node,
-                    services: node.Services.map((key) => { return { name: key, size: 1} }),
+                    services: node.Services,
+                    // .map((key) => { return { name: key, size: 1} }),
                     checks: node.Checks,
                     address: node.Address
                 }

@@ -3,14 +3,15 @@
 const React = require('react');
 const DOM = require('react-dom');
 
-const Header = React.createClass({
+class Header extends React.Component{
 
-    getInitialState() {
-        return {
-            url: this.props.url,
+    constructor(props) {
+        super(props)
+        this.state = {
+            url: props.url,
             servers: []
-        };
-    },
+        }
+    }
 
     componentDidMount() {
         this.makeCall(`api/get/server/header`, {method: "GET"}, (res) => {
@@ -23,13 +24,13 @@ const Header = React.createClass({
             }) : []
             this.setState({servers: servers})
         })
-    },
+    }
 
     makeCall(path, opts, callback) {
         fetch(`${this.state.url}/${path}`, opts).then((r) => r.json()).then((data) => {
             callback(data)
         })
-    },
+    }
 
     render() {
         let styles = {
@@ -72,6 +73,6 @@ const Header = React.createClass({
         );
     }
 
-});
+}
 
 module.exports = Header
