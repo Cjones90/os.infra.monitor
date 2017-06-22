@@ -32,7 +32,9 @@ const server = {
                     ".png": "text/png",
                     ".css": "text/css",
                     ".html": "text/html",
-                    ".xls": "application/vnd.ms-excel"
+                    ".xls": "application/vnd.ms-excel",
+                    ".xlsx": "application/vnd.ms-excel",
+                    ".xlsm": "application/vnd.ms-excel"
                 }
                 let filePath = contentTypes[extname] ? PUB_FILES+file : PUB_FILES+"index.html"
                 let contentType = contentTypes[extname] ? contentTypes[extname] : 'text/html';
@@ -49,8 +51,6 @@ const server = {
             }
         }).listen(PORT);
         console.log("Server running")
-        // TODO: Should look into having only one WSS server running, seperating out
-        // web clients and apps
         ws.init(httpServer);
         if(REGISTER_SERVICE) { service.register(); }
     }
