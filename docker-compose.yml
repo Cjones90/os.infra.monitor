@@ -2,7 +2,7 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/monitor:0.7.1
+        image: jestrr/monitor:0.7.2
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         # volumes:
         #     - ./src:/home/app/src
@@ -34,4 +34,4 @@ services:
             SERVICE_NAME: monitor
             SERVICE_PORT: 4040
             REGISTER_SERVICE: "true"
-            IMAGE_VER: 0.7.1
+            IMAGE_VER: 0.7.2
