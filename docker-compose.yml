@@ -2,7 +2,7 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/monitor:0.7.2
+        image: jestrr/monitor:0.7.3
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         # volumes:
         #     - ./src:/home/app/src
@@ -21,7 +21,7 @@ services:
             # Host WS Port:Container WS Port
             - "4041:4001"
         labels:
-            com.ree.service: monitor
+            com.consul.service: monitor
         environment:
             PUB_FILES: ./pub/
             BIN: ./server/bin/
