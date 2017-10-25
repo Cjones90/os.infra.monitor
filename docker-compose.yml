@@ -2,9 +2,11 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/monitor:0.7.3
+        image: jestrr/monitor:0.8.0
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
-        # volumes:
+        volumes:
+            - /etc/ssl/creds:/home/app/creds
+            - /etc/domain:/home/app/domain
         #     - ./src:/home/app/src
         #     - ./server:/home/app/server
         deploy:
@@ -29,6 +31,7 @@ services:
 
             # 172.17.0.1
             CONSUL_LEADER: 172.17.0.1 # Change
+            USE_AUTH: "true"
 
             # Consul
             SERVICE_NAME: monitor
