@@ -2,13 +2,15 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/monitor:0.8.0
+        image: jestrr/monitor:0.9.0
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         volumes:
             - /etc/ssl/creds:/home/app/creds
             - /etc/domain:/home/app/domain
         #     - ./src:/home/app/src
         #     - ./server:/home/app/server
+        extra_hosts:
+            localmachine: "172.17.0.1"
         deploy:
             replicas: 1
             update_config:

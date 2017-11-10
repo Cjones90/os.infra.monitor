@@ -35,6 +35,7 @@ class Graph extends React.Component {
     }
 
     checkDataCenters() {
+        window.ws.send({type: "auth"})
         window.ws.send({type: "services"})
         window.ws.send({type: "getLeader"})
     }
@@ -47,6 +48,7 @@ class Graph extends React.Component {
     }
 
     handleServices(root) {
+        if(!root.children.length) { return console.log("No services"); }
         let updatedMachine = root.children[0].children.filter((machine) => {
             return machine.name === this.selectedMachine
         })

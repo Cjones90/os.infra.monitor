@@ -10,7 +10,7 @@ const getCookie = (name) => {
 const api = {
 
     get: function (type, opts, callback) {
-        // if(!opts.id) { return alert("Must provide an 'id' property to options") }
+        if(typeof(opts) === "function") { callback = opts; opts = {} }
         opts.type = type
 
         let request = {
@@ -27,8 +27,9 @@ const api = {
     },
 
     post: function (type, opts, callback) {
-        // if(!opts.id) { return alert("Must provide an 'id' property to options") }
+        if(typeof(opts) === "function") { callback = opts; opts = {} }
         opts.type = type
+
         let request = {
             method: "POST",
             body: JSON.stringify(opts),
@@ -44,8 +45,9 @@ const api = {
     },
 
     put: function (type, opts, callback) {
-        // if(!opts.id) { return alert("Must provide an 'id' property to options") }
+        if(typeof(opts) === "function") { callback = opts; opts = {} }
         opts.type = type
+        
         let request = {
             method: "PUT",
             body: JSON.stringify(opts),

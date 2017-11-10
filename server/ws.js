@@ -3,6 +3,7 @@
 const WebSocket = require("ws");
 const http = require("http");
 const health = require("./health.js")
+const auth = require("./auth.js");
 
 // # IP Address of consul leader - Temp until better solution
 // #   like a call-in "as leader" etc.
@@ -45,7 +46,11 @@ module.exports = {
         this.wss = new WebSocket.Server(serverInit);
         this.wss.broadcast = (data) => {
             this.wss.clients.forEach((client) => {
-                client.readyState === WebSocket.OPEN && client.send(data);
+                if(client.readyState === WebSocket.OPEN) {
+                    this.canSendInfo(client, (canSend) => {
+                         canSend && client.send(data);
+                    })
+                }
             });
         };
         this.registerEventHandlers();
@@ -98,6 +103,7 @@ module.exports = {
                 evt = JSON.parse(evt);
                 let chatroom = ws.upgradeReq.url
                 evt.type === "pong" && this.stilAlive(chatroom, evt, ws);
+                evt.type === "auth" && this.addHeaders(chatroom, evt, ws);
                 evt.type === "status" && this.getServerStatus(chatroom, evt, ws);
                 evt.type === "services" && this.checkDataCenters(chatroom, evt, ws);
                 evt.type === "updateCenters" && this.checkCenters();
@@ -119,6 +125,15 @@ module.exports = {
     },
 
     canSend: function (ws) { return ws.readyState === 1 },
+
+    addHeaders: function (chatroom, evt, ws) { ws.headers = evt.headers },
+
+    canSendInfo: function (ws, callback) {
+        this.checkAccess(ws.headers, "user", ({status}) => {
+            let canSend = status && ws.readyState === 1
+            callback(canSend)
+        })
+    },
 
     fetchConsulInfo() {
         if(fetching) { return Promise.reject("Already fetching") }
@@ -243,7 +258,11 @@ module.exports = {
 
     checkDataCenters: function (chatroom, evt, ws) {
         let response = { type: "services", root: root }
-        ws.send(JSON.stringify(response))
+        let empty = { type: "services", root: { name: "Root", children: [] } }
+        this.canSendInfo(ws, (canSend) => {
+             canSend && ws.send(JSON.stringify(response))
+             !canSend && ws.send(JSON.stringify(empty))
+        })
 
     },
 
@@ -273,6 +292,22 @@ module.exports = {
             });
         })
         req.on("error", (e) => { fetching = false; console.log("ERR:", e) })
+    },
+
+    checkAccess: function (headers, accessReq, callback) {
+        auth.checkAccess({headers, app: "monitor", accessReq: accessReq})
+        .then(({ status, hasPermissions }) => {
+            if(!status) {
+                console.log("User has incorrect authentication credentials");
+                return callback({status: false})
+            }
+            if(!hasPermissions) {
+                console.log("User does not have required access for action");
+                return callback({status: false})
+            }
+            callback({status: true})
+        })
+        .catch((e) => { console.log("Bad:", e); callback({status: false}) })
     },
 
 

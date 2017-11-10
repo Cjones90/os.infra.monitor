@@ -7,6 +7,13 @@ let callbacks = {
     "close": []
 };
 
+const getCookie = (name) => {
+    return document.cookie.split('; ').reduce((acc, v) => {
+        const split = v.split('=')
+        return split[0] === name ? decodeURIComponent(split[1]) : acc
+    }, '')
+}
+
 export default class WS {
 
     constructor() {
@@ -71,6 +78,10 @@ export default class WS {
     }
 
     send (json) {
+        json.headers = {
+            "auth-email": getCookie("Auth-Email"),
+            "auth-key": getCookie("Auth-Key"),
+        }
         this.ws.send(JSON.stringify(json))
     }
 }
