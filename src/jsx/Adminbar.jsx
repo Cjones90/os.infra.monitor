@@ -19,14 +19,14 @@ export default class Adminbar extends React.Component {
     }
 
     componentDidMount() {
-        api.get("username", (res) => {
+        api.get("/username", (res) => {
             if(!res.status) { return this.setState({ isLoggedIn: false }) }
             this.setState({ user: res.data, isLoggedIn: true })
         })
     }
 
     logout () {
-        api.post("logout", (res) => {
+        api.post("/logout", (res) => {
             if(!res.status) {
                 return alert("Unable to logout at this time due to incorrect credentials or server error. "+
                 "\n\nPlease try again later.")

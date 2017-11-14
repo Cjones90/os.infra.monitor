@@ -2,7 +2,7 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/monitor:0.9.0
+        image: jestrr/monitor:0.9.1
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         volumes:
             - /etc/ssl/creds:/home/app/creds
@@ -27,16 +27,16 @@ services:
         labels:
             com.consul.service: monitor
         environment:
-            PUB_FILES: ./pub/
-            BIN: ./server/bin/
-            OUTPUT_FILES: ./server/output/
-
-            # 172.17.0.1
-            CONSUL_LEADER: 172.17.0.1 # Change
-            USE_AUTH: "true"
-
             # Consul
             SERVICE_NAME: monitor
             SERVICE_PORT: 4040
             REGISTER_SERVICE: "true"
-            IMAGE_VER: 0.7.2
+            IMAGE_VER: 0.9.1
+            # Server
+            PUB_FILES: ./pub/
+            BIN: ./server/bin/
+            OUTPUT_FILES: ./server/output/
+            USE_AUTH: "true"
+
+            # 172.17.0.1
+            CONSUL_LEADER: 172.17.0.1 # Change

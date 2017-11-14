@@ -26,7 +26,7 @@ class SidePanel extends React.Component {
             service: e.check.CheckID.replace("service:", ""),
             ip: e.ip
         }
-        api.put("deregisterService", req, (res) => {
+        api.put("/deregisterService", req, (res) => {
             window.ws.send({type: "updateCenters"})
         })
     }
