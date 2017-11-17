@@ -34,7 +34,7 @@ class SidePanel extends React.Component {
     render () {
 
         let services = this.state.machine.services.map((service, ind) => {
-            return (<div className={`service`} key={ind}>{service.name}</div>)
+            return (<div className={`service`} key={ind}>{service.name}{service.version && ": v"+service.version}</div>)
         })
 
         let checks = this.state.machine.checks.map((check, ind) => {

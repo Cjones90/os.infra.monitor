@@ -50,21 +50,26 @@
     }
 
     .serviceContainer {
-        // text-align: center;
-        width: 25%;
+        width: 40%;
+        min-width: 270px;
         border: 1px solid white;
         margin: 3px;
-        .header > span:first-of-type {
-            width: 75%;
-            display: inline-block;
+        display: flex;
+        flex-flow: column nowrap;
+        .header {
+            display: flex;
+            flex-flow: row nowrap;
+            > span { flex: 1; margin: 0 7px; }
+            > span:first-of-type { flex: 2.2; }
         }
         .service {
             border: 1px solid white;
             margin: 3px;
             background: #529255;
-            .name, .port { display: inline-block;}
-            .name { width: 75%; }
-            // .port { width: 10%; }
+            display: flex;
+            flex-flow: row nowrap;
+            .name, .port, .version { flex: 1; margin: 0 7px; }
+            .name { flex: 2.2; }
         }
     }
 

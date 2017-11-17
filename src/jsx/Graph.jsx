@@ -126,7 +126,7 @@ class Graph extends React.Component {
             let machines = dc.children.map((machine, ind) => {
                 machine.services.forEach((s) => allServices.push(s))
                 let services = machine.services.map((service, ind) => {
-                    return (<div className="service" key={ind}>{service.name}</div>)
+                    return (<div className="service" key={ind}>{service.name}{service.version && ": v"+service.version}</div>)
                 })
                 let numServices = machine.services.length;
                 let checks = machine.checks.map((check, ind) => {
@@ -175,6 +175,7 @@ class Graph extends React.Component {
             return (
                 <div className={`service`} key={ind}>
                     <span className={"name"}>{service.name}:</span>
+                    <span className={"version"}>{service.version}</span>
                     <span className={"port"}>{service.port}</span>
                 </div>
             )
@@ -188,6 +189,7 @@ class Graph extends React.Component {
                     <br/>
                     <div className={"header"}>
                         <span>Service:</span>
+                        <span>Version:</span>
                         <span>Port:</span>
                     </div>
                     {displayServices}

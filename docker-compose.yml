@@ -2,13 +2,13 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/monitor:0.9.1
+        image: jestrr/monitor:0.9.2
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         volumes:
             - /etc/ssl/creds:/home/app/creds
             - /etc/domain:/home/app/domain
-        #     - ./src:/home/app/src
-        #     - ./server:/home/app/server
+            # - ./src:/home/app/src
+            # - ./server:/home/app/server
         extra_hosts:
             localmachine: "172.17.0.1"
         deploy:
@@ -31,7 +31,7 @@ services:
             SERVICE_NAME: monitor
             SERVICE_PORT: 4040
             REGISTER_SERVICE: "true"
-            IMAGE_VER: 0.9.1
+            IMAGE_VER: 0.9.2
             # Server
             PUB_FILES: ./pub/
             BIN: ./server/bin/

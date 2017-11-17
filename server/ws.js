@@ -158,7 +158,13 @@ module.exports = {
             nodes.forEach((node) => {
                 let matchedServices = filteredServices.filter((serviceNode) => serviceNode.Node.ID === node.ID)[0].Services
                 node.Services = Object.keys(matchedServices).length > 0
-                    ? Object.keys(matchedServices).map((service) => { return {name: service, port: matchedServices[service].Port} })
+                    ? Object.keys(matchedServices).map((service) => {
+                        return {
+                            name: service,
+                            port: matchedServices[service].Port,
+                            version: matchedServices[service].Tags[0] || ""
+                        }
+                      })
                     : []
             })
         })
