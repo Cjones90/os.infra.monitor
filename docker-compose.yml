@@ -2,11 +2,17 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/monitor:0.9.2
+        image: jestrr/monitor:0.10.0
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         volumes:
             - /etc/ssl/creds:/home/app/creds
+            - /etc/serverkey:/home/app/serverkey
             - /etc/domain:/home/app/domain
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /usr/bin/docker:/usr/local/bin/docker
+            - $HOME/.docker/config.json:/root/.docker/config.json
+            - /root/repos:/home/app/repos
+            # - $HOME/code/temprepo:/home/app/repos
             # - ./src:/home/app/src
             # - ./server:/home/app/server
         extra_hosts:
@@ -19,19 +25,21 @@ services:
             restart_policy:
                 max_attempts: 3
                 condition: on-failure
+            placement:
+                constraints:
+                    - node.role == manager
         ports:
             # HOST:CONTAINER
-            - "4040:4000"
             # Host WS Port:Container WS Port
-            - "4041:4001"
+            # - "172.17.0.1:4040:4000" # Swarm dev
+            # - "172.17.0.1:4041:4000" # Swarm dev
+            - "4040:4000"            # Prod
+            - "4041:4001"            # Prod
         labels:
             com.consul.service: monitor
         environment:
             # Consul
-            SERVICE_NAME: monitor
-            SERVICE_PORT: 4040
             REGISTER_SERVICE: "true"
-            IMAGE_VER: 0.9.2
             # Server
             PUB_FILES: ./pub/
             BIN: ./server/bin/

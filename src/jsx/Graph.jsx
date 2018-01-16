@@ -3,6 +3,8 @@
 import React, { PropTypes } from 'react';
 import * as d3 from "d3";
 
+import Launcher from "./Launcher.jsx";
+
 require("../style/Graph.less")
 
 const myjson = require("../js/sample.js")
@@ -184,15 +186,18 @@ class Graph extends React.Component {
         // <svg id="tidytree" width="900" height="670"></svg>
         return (
             <div id="component-graphs">
-                <div className={`serviceContainer`}>
-                    <a href={`http://${this.state.leader}:8500/ui`} target="_blank">Consul UI</a>
-                    <br/>
-                    <div className={"header"}>
-                        <span>Service:</span>
-                        <span>Version:</span>
-                        <span>Port:</span>
+                <div id={`service-management`}>
+                    <div className={`serviceContainer`}>
+                        <a href={`http://${this.state.leader}:8500/ui`} target="_blank">Consul UI</a>
+                        <br/>
+                        <div className={"header"}>
+                            <span>Service:</span>
+                            <span>Version:</span>
+                            <span>Port:</span>
+                        </div>
+                        {displayServices}
                     </div>
-                    {displayServices}
+                    <Launcher />
                 </div>
                 {dataCenters}
 

@@ -49,29 +49,34 @@
         }
     }
 
-    .serviceContainer {
-        width: 40%;
-        min-width: 270px;
-        border: 1px solid white;
-        margin: 3px;
+    #service-management {
         display: flex;
-        flex-flow: column nowrap;
-        .header {
-            display: flex;
-            flex-flow: row nowrap;
-            > span { flex: 1; margin: 0 7px; }
-            > span:first-of-type { flex: 2.2; }
-        }
-        .service {
+        flex-flow: row;
+        .serviceContainer {
+            width: 40%;
+            min-width: 270px;
             border: 1px solid white;
             margin: 3px;
-            background: #529255;
             display: flex;
-            flex-flow: row nowrap;
-            .name, .port, .version { flex: 1; margin: 0 7px; }
-            .name { flex: 2.2; }
+            flex-flow: column nowrap;
+            .header {
+                display: flex;
+                flex-flow: row nowrap;
+                > span { flex: 1; margin: 0 7px; }
+                > span:first-of-type { flex: 2.2; }
+            }
+            .service {
+                border: 1px solid white;
+                margin: 3px;
+                background: #529255;
+                display: flex;
+                flex-flow: row nowrap;
+                .name, .port, .version { flex: 1; margin: 0 7px; }
+                .name { flex: 2.2; }
+            }
         }
     }
+
 
     .dataCenter {
         display: flex;

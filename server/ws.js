@@ -65,7 +65,6 @@ module.exports = {
     },
 
     checkCenters: function () {
-        console.log("Check");
         this.fetchConsulInfo()
         .then(() => this.formTree(this.broadcastDataCenters.bind(this)))
         .catch((e) => {
@@ -159,10 +158,12 @@ module.exports = {
                 let matchedServices = filteredServices.filter((serviceNode) => serviceNode.Node.ID === node.ID)[0].Services
                 node.Services = Object.keys(matchedServices).length > 0
                     ? Object.keys(matchedServices).map((service) => {
+                        let tag = matchedServices[service].Tags[0]
+                        let tagIsVer = tag && tag.match(/\d\.\d\.\d/)
                         return {
                             name: service,
                             port: matchedServices[service].Port,
-                            version: matchedServices[service].Tags[0] || ""
+                            version: tagIsVer ? tag : ""
                         }
                       })
                     : []
