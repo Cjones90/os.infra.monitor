@@ -25,9 +25,9 @@ const docker_creds = require("/root/.docker/config.json").auths["https://index.d
 const LATEST_NUM_OF_TAGS = 10;
 
 const REFRESH_TOKEN_INTERVAL = 1000 * 60 * 5;
-setTimeout(refreshRepos, 1000)                    // Initially populate
+setTimeout(getServices, 500)                    // Initially populate
+setTimeout(refreshRepos, 2000)                    // Initially populate
 setInterval(refreshRepos, REFRESH_TOKEN_INTERVAL) // Refresh every 5 minutes
-
 const routes = function (req, res) {
 
     const respond = (response) => {
@@ -79,7 +79,7 @@ const PORT = url.parse(AUTH_URL).port
 const HOST = url.parse(AUTH_URL).hostname
 const PROTO = url.parse(AUTH_URL).protocol
 
-let getServices = (() => {
+function getServices() {
     let options = {
         hostname: HOST,
         port: PORT,
@@ -107,7 +107,7 @@ let getServices = (() => {
         : https.request(options, respondCallback)
     req.write(JSON.stringify({key: key}));
     req.end();
-})()
+}
 
 function checkAccess(headers, app, accessReq, callback) {
     auth.checkAccess({headers, app, accessReq})
