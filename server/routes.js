@@ -157,6 +157,9 @@ function getUser(headers, accessReq, respond) {
 
 function getToken(reponame) {
     return new Promise((resolve, reject) => {
+        if(!apps || !apps.dockerOrg || !docker_creds) {
+            return reject("No docker credentials or incorrect docker org")
+        }
         let customHeaders = {
             "Accept": "application/json",
             "Authorization": `Basic ${docker_creds}`
@@ -173,11 +176,12 @@ function getToken(reponame) {
             res.on("data", (data) => raw += data.toString())
             res.on("err", (err) => { reject(err) })
             res.on("end", () => {
-                let res = JSON.parse(raw)
-                apps.repos[reponame].exp = new Date(res.issued_at)
-                apps.repos[reponame].exp.setMinutes(apps.repos[reponame].exp.getMinutes() + 5);
-                apps.repos[reponame].token = res.token
-                resolve({token: res.token, reponame})
+                let res = raw ? JSON.parse(raw) : ""
+                res ? apps.repos[reponame].exp = new Date(res.issued_at) : ""
+                res ? apps.repos[reponame].exp.setMinutes(apps.repos[reponame].exp.getMinutes() + 5) : "";
+                res ? apps.repos[reponame].token = res.token : ""
+                res ? resolve({token: res.token, reponame}) : ""
+                !res ? reject("Empty response from docker.io") : ""
             })
         }
         let req = https.request(options, respondCallback)
@@ -187,6 +191,7 @@ function getToken(reponame) {
 
 function getTags({token, reponame}) {
     return new Promise((resolve, reject) => {
+        if(!token) { return reject("No token") }
         let customHeaders = {
             "Accept": "application/json",
             "Authorization": `Bearer ${token}`
@@ -215,6 +220,10 @@ function getTags({token, reponame}) {
 
 function refreshRepos(callback) {
     let allPromises = []
+    if(!apps || !apps.repos) {
+        callback && callback("No repos available to get tags for")
+        return
+    }
     Object.keys(apps.repos).forEach((reponame) => {
         // If token expired, get token, otherwise just get tags
         if(apps.repos[reponame].exp < new Date()) {
@@ -226,14 +235,15 @@ function refreshRepos(callback) {
     })
     Promise.all(allPromises).then(() => {
         console.log("Refreshed Repo Tags");
-        callback && callback(apps.repos)
+        callback && callback(null, apps.repos)
     })
 }
 
 function getRepos(headers, accessReq, respond) {
     checkAccess(headers, "monitor", accessReq, ({status}) => {
         if(status) {
-            refreshRepos((repos) => {
+            refreshRepos((err, repos) => {
+                if(err) { return respond({status: false, data: err})}
                 let tags = Object.keys(repos).map((reponame) => ({name: reponame, versions: repos[reponame].tags}))
                 respond({status: true, data: tags})
             })
@@ -252,8 +262,8 @@ function launchService(headers, options, respond) {
             version = version === "latest" ? apps.repos[options.service].tags[1] : version;
 
             let bash = spawn(`bash`, {cwd: `/home/app/repos/${repo}`});
-            bash.stdin.write(`git fetch`);
-            bash.stdin.write(`git pull origin master --force`);
+            bash.stdin.write(`git fetch\n`);
+            bash.stdin.write(`git pull origin master --force\n`);
             bash.stdin.write(`git checkout ${version}\n`);
             bash.stdin.write(`docker stack deploy --compose-file docker-compose.yml ${options.service} --with-registry-auth`);
             bash.stdin.end()
