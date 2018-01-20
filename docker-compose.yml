@@ -2,7 +2,7 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/monitor:0.10.2
+        image: jestrr/monitor:0.10.3
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         volumes:
             - /etc/ssl/creds:/home/app/creds
@@ -10,8 +10,11 @@ services:
             - /etc/domain:/home/app/domain
             - /var/run/docker.sock:/var/run/docker.sock
             - /usr/bin/docker:/usr/local/bin/docker
-            - $HOME/.docker/config.json:/root/.docker/config.json
+            ## Remote
+            - /root/.docker/config.json:/root/.docker/config.json
             - /root/repos:/home/app/repos
+            ## Local/Dev
+            # - $HOME/.docker/config.json:/root/.docker/config.json
             # - $HOME/code/temprepo:/home/app/repos
             # - ./src:/home/app/src
             # - ./server:/home/app/server

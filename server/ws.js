@@ -159,7 +159,7 @@ module.exports = {
                 node.Services = Object.keys(matchedServices).length > 0
                     ? Object.keys(matchedServices).map((service) => {
                         let tag = matchedServices[service].Tags[0]
-                        let tagIsVer = tag && tag.match(/\d\.\d\.\d/)
+                        let tagIsVer = tag && tag.match(/\d{1,}\.\d{1,}\.\d{1,}/)
                         return {
                             name: service,
                             port: matchedServices[service].Port,
