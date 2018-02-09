@@ -34,7 +34,8 @@ const server = {
         let server = keyExists && options.key !== ""
             ? https.createServer(options, this.serverListener.bind(this))
             : http.createServer(this.serverListener.bind(this))
-        server.listen(PORT, console.log("Server running"));
+        let serverType = keyExists && options.key !== "" ? "https" : "http"
+        server.listen(PORT, console.log(`${serverType} server running`));
         ws.init(server)
         if(REGISTER_SERVICE) { service.register(); }
     },
