@@ -209,6 +209,7 @@ function getTags({token, reponame}) {
             res.on("err", (err) => { reject(err) })
             res.on("end", () => {
                 let res = JSON.parse(raw)
+                if(!res.tags) { return reject("Unable to retrieve tags") }
                 res.tags.sort((a, b) => {
                     let splitA = a.split(".")
                     let splitB = b.split(".")
