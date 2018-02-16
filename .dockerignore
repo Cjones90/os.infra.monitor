@@ -2,5 +2,6 @@ node_modules/
 logs
 .git
 
+pub/app.bundle.js
 npm-debug.log
 .DS_Store

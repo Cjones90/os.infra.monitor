@@ -6,9 +6,9 @@ const http = require("http");
 const https = require("https");
 const { fork, spawn } = require("child_process");
 
+const { service, auth } = require("os-npm-util");
+
 const health = require("./health.js");
-const service = require("./service.js");
-const auth = require("./auth.js");
 
 let keyExists = fs.existsSync("serverkey")
 let key = keyExists ? fs.readFileSync("serverkey", "utf8") : "";
@@ -25,9 +25,12 @@ const docker_creds = require("/root/.docker/config.json").auths["https://index.d
 const LATEST_NUM_OF_TAGS = 10;
 
 const REFRESH_TOKEN_INTERVAL = 1000 * 60 * 5;
+const REFRESH_REPO_INTERVAL = 1000 * 60 * 3;
 setTimeout(getServices, 500)                    // Initially populate
-setTimeout(refreshRepos, 2000)                    // Initially populate
-setInterval(refreshRepos, REFRESH_TOKEN_INTERVAL) // Refresh every 5 minutes
+setTimeout(refreshToken, 1000)                    // Initially populate
+setInterval(refreshToken, REFRESH_TOKEN_INTERVAL) // Refresh every 5 minutes
+setInterval(refreshRepos, REFRESH_REPO_INTERVAL) // Refresh every 3 minutes
+
 const routes = function (req, res) {
 
     const respond = (response) => {
@@ -55,6 +58,8 @@ const routes = function (req, res) {
             break;
             case "/api/get/repos": getRepos(headers, "user", respond) //username / key
             break;
+            case "/api/get/menu": auth.getMenu(headers, respond) //username / key
+            break;
 
             case "/api/post/logout": sendLogout(headers, respond) //username / key
             break;
@@ -68,31 +73,20 @@ const routes = function (req, res) {
 }
 
 // TODO: Temporary solution storing apps on auth server
-// We do NOT want all this bloat
-const DOMAIN = fs.existsSync(`${process.cwd()}/domain/name.json`)
-    ? require(`${process.cwd()}/domain/name.json`).domain
-    : "localhost"
-const AUTH_URL = DOMAIN === "localhost"
-    ? "http://localmachine:4030"
-    : `https://auth.${DOMAIN}:443`
-const PORT = url.parse(AUTH_URL).port
-const HOST = url.parse(AUTH_URL).hostname
-const PROTO = url.parse(AUTH_URL).protocol
-
 function getServices() {
     let options = {
-        hostname: HOST,
-        port: PORT,
+        hostname: auth.HOST,
+        port: auth.PORT,
         path: "/api/post/monitor",
         method: "POST"
     }
     let respondCallback = (res) => {
         let raw = ""
         res.on("data", (data) => raw += data.toString())
-        res.on("err", (err) => { console.log(err) })
+        res.on("err", (err) => { console.log("ERR - ROUTES.GETSERVICES\n", err) })
         res.on("end", () => {
-            let res = JSON.parse(raw)
-            apps = res.data
+            let res = raw ? JSON.parse(raw) : ""
+            apps = res.status ? res.data : ""
             apps && apps.services.forEach((name) => {
                 apps.repos[name] = {
                     token: "",
@@ -102,9 +96,10 @@ function getServices() {
             })
         })
     }
-    let req = PROTO === "http:"
+    let req = auth.PROTO === "http:"
         ? http.request(options, respondCallback)
         : https.request(options, respondCallback)
+    req.on("error", (e) => console.log("ERR - ROUTES.GETSERVICES\n", e))
     req.write(JSON.stringify({key: key}));
     req.end();
 }
@@ -123,7 +118,7 @@ function checkAccess(headers, app, accessReq, callback) {
         callback({status: true})
     })
     .catch((e) => {
-        console.log("Bad:", e);
+        console.log("ERR - ROUTES.CHECKACCESS:\n", e);
         callback({status: false, data: "Server error"})
     })
 }
@@ -138,19 +133,19 @@ function sendLogout(headers, respond) {
         respond({status: true, data: "Success"})
     })
     .catch((e) => {
-        console.log("Bad:", e);
+        console.log("ERR - ROUTES.LOGOUT:\n", e);
         respond({status: false, data: "Server error"})
     })
 }
 
 function getUser(headers, accessReq, respond) {
-    checkAccess(headers, "monitor", accessReq, ({status}) => {
+    checkAccess(headers, "monitor", accessReq, ({status, data}) => {
         if(status) {
             let email = headers["auth-email"]
             respond({status: true, data: email})
         }
         else {
-            respond({status: false, data: "Server error"})
+            respond({status: false, data})
         }
     })
 }
@@ -177,14 +172,19 @@ function getToken(reponame) {
             res.on("err", (err) => { reject(err) })
             res.on("end", () => {
                 let res = raw ? JSON.parse(raw) : ""
-                res ? apps.repos[reponame].exp = new Date(res.issued_at) : ""
-                res ? apps.repos[reponame].exp.setMinutes(apps.repos[reponame].exp.getMinutes() + 5) : "";
-                res ? apps.repos[reponame].token = res.token : ""
-                res ? resolve({token: res.token, reponame}) : ""
-                !res ? reject("Empty response from docker.io") : ""
+                if(res) {
+                    apps.repos[reponame].exp = new Date(res.issued_at)
+                    apps.repos[reponame].exp.setMinutes(apps.repos[reponame].exp.getMinutes() + 5)
+                    apps.repos[reponame].token = res.token
+                    resolve({token: res.token, reponame})
+                }
+                else {
+                    reject("Empty response from docker.io")
+                }
             })
         }
         let req = https.request(options, respondCallback)
+        req.on("error", (e) => console.log("ERR - ROUTES.GETTOKEN\n", e))
         req.end();
     })
 }
@@ -209,44 +209,60 @@ function getTags({token, reponame}) {
             res.on("err", (err) => { reject(err) })
             res.on("end", () => {
                 let res = JSON.parse(raw)
+                res.tags.sort((a, b) => {
+                    let splitA = a.split(".")
+                    let splitB = b.split(".")
+                    if(Number(splitA[0]) > Number(splitB[0])) { return 1 }
+                    if(Number(splitA[0]) < Number(splitB[0])) { return -1 }
+
+                    if(Number(splitA[1]) > Number(splitB[1])) { return 1 }
+                    if(Number(splitA[1]) < Number(splitB[1])) { return -1 }
+
+                    if(Number(splitA[2]) > Number(splitB[2])) { return 1 }
+                    if(Number(splitA[2]) < Number(splitB[2])) { return -1 }
+                    return 0
+                })
                 apps.repos[reponame].tags = res.tags.reverse().splice(0, LATEST_NUM_OF_TAGS)
                 resolve()
             })
         }
         let req = https.request(options, respondCallback)
+        req.on("error", (e) => console.log("ERR - ROUTES.GETTAGS\n", e))
         req.end();
     })
 }
 
-function refreshRepos(callback) {
+function refreshToken() {
     let allPromises = []
     if(!apps || !apps.repos) {
-        callback && callback("No repos available to get tags for")
-        return
+        return console.log("No repos available to get tags for")
     }
     Object.keys(apps.repos).forEach((reponame) => {
         // If token expired, get token, otherwise just get tags
         if(apps.repos[reponame].exp < new Date()) {
             allPromises.push(getToken(reponame).then(getTags))
         }
-        else {
-            allPromises.push(getTags({token: apps.repos[reponame].token, reponame}))
-        }
     })
-    Promise.all(allPromises).then(() => {
-        console.log("Refreshed Repo Tags");
-        callback && callback(null, apps.repos)
-    })
+    Promise.all(allPromises).then(() => console.log("Refreshed Token"))
+    .catch((e) => console.log("ERR - ROUTES.REFRESHTOKEN:", e))
+}
+
+function refreshRepos() {
+    if(apps && apps.repos) {
+        Object.keys(apps.repos).forEach((reponame) =>
+            getTags({token: apps.repos[reponame].token, reponame})
+            .catch((e) => console.log("ERR - ROUTES.REFRESHREPO:", e))
+        )
+    }
 }
 
 function getRepos(headers, accessReq, respond) {
     checkAccess(headers, "monitor", accessReq, ({status}) => {
         if(status) {
-            refreshRepos((err, repos) => {
-                if(err) { return respond({status: false, data: err})}
-                let tags = Object.keys(repos).map((reponame) => ({name: reponame, versions: repos[reponame].tags}))
-                respond({status: true, data: tags})
-            })
+            let tags = apps.repos
+                ? Object.keys(apps.repos).map((reponame) => ({name: reponame, versions: apps.repos[reponame].tags}))
+                : [{name: "", versions: []}]
+            respond({status: true, data: tags})
         }
         else {
             respond({status: false, data: "Server error"})

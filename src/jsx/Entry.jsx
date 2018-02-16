@@ -2,10 +2,11 @@
 
 import React from 'react';
 import DOM from 'react-dom';
-import Header from "./Header.jsx";
+
 import Graph from "./Graph.jsx";
 import SidePanel from "./SidePanel.jsx";
 import Adminbar from "./Adminbar.jsx";
+import { Menu } from "os-npm-util";
 
 import WS from "../js/wsclient.js"
 window.ws = new WS();
@@ -96,7 +97,7 @@ class Entry extends React.Component {
 
         return (
             <div id="component-entry">
-                <Header url={`${DOMAIN}:4040`}/>
+                <Menu />
                 <Adminbar />
                 <h2>App Health</h2>
 

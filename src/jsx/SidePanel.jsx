@@ -1,7 +1,8 @@
 "use strict";
 
 import React, { PropTypes } from 'react'
-import api from "../js/api.js"
+
+import { api } from "os-npm-util";
 
 require("../style/SidePanel.less")
 

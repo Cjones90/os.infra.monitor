@@ -3,7 +3,7 @@
 import React from 'react';
 import DOM from 'react-dom';
 
-import api from "../js/api.js";
+import { api } from "os-npm-util";
 
 require("../style/Adminbar.less")
 

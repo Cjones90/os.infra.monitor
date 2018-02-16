@@ -2,7 +2,7 @@
 
 import React, { PropTypes } from 'react'
 
-const api = require("../js/api.js");
+import { api } from "os-npm-util";
 
 require("../style/Launcher.less")
 

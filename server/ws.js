@@ -2,8 +2,10 @@
 
 const WebSocket = require("ws");
 const http = require("http");
+
+const { auth } = require("os-npm-util");
+
 const health = require("./health.js")
-const auth = require("./auth.js");
 
 // # IP Address of consul leader - Temp until better solution
 // #   like a call-in "as leader" etc.
@@ -55,6 +57,7 @@ module.exports = {
         };
         this.registerEventHandlers();
         setInterval(this.startKeepAliveChecks.bind(this), KEEP_ALIVE_INTERVAL)
+        // TODO: Turn into pub/sub model, only broadcast when changes happen vs checking on an interval
         setInterval(this.checkCenters.bind(this), BROADCAST_INTERVAL)
         console.log("WSS running");
         // RosterServer.init(ROSTER_WS_PORT);
@@ -314,7 +317,7 @@ module.exports = {
             }
             callback({status: true})
         })
-        .catch((e) => { console.log("Bad:", e); callback({status: false}) })
+        .catch((e) => { console.log("ERR - WS.CHECKACCESS:\n", e); callback({status: false}) })
     },
 
 
