@@ -1,20 +1,19 @@
 "use strict";
 
-const WebSocket = require("ws");
 const http = require("http");
 
+const WebSocket = require("ws");
 const { auth } = require("os-npm-util");
 
 const health = require("./health.js")
 
-// # IP Address of consul leader - Temp until better solution
-// #   like a call-in "as leader" etc.
-const CONSUL_LEADER = process.env.CONSUL_LEADER
-let leaderAddr = CONSUL_LEADER;
+const CONSUL_LEADER = auth.DOMAIN === "localhost"
+    ? `http://localhost:8500`
+    : `${auth.PROTO}//consul.${auth.DOMAIN}:8500`
 
-if(leaderAddr.indexOf("//") > -1) {
-    leaderAddr = leaderAddr.split("//")[1].split(":")[0];
-}
+// TODO: This works... for now
+const CONSUL_API_IP = "172.17.0.1"
+const CONSUL_API_PORT = "8500"
 
 let root = {
     name: "Root",
@@ -277,14 +276,11 @@ module.exports = {
     },
 
     sendGet: function (url, callback) {
-        let host = CONSUL_LEADER.indexOf("//") > -1
-            ? "172.17.0.1"
-            : leaderAddr
         let opts = {
             method: "GET",
-            port: "8500",
+            port: CONSUL_API_PORT,
             path: `${url}`,
-            hostname: host
+            hostname: CONSUL_API_IP
         }
         let response = "";
         let req = http.get(opts, (res) => {

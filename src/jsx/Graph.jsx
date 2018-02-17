@@ -188,7 +188,7 @@ class Graph extends React.Component {
             <div id="component-graphs">
                 <div id={`service-management`}>
                     <div className={`serviceContainer`}>
-                        <a href={`http://${this.state.leader}:8500/ui`} target="_blank">Consul UI</a>
+                        <a href={`${this.state.leader}/ui`} target="_blank">Consul UI</a>
                         <br/>
                         <div className={"header"}>
                             <span>Service:</span>

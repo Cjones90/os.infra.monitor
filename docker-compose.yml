@@ -2,7 +2,7 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/monitor:0.11.1
+        image: jestrr/monitor:0.12.0
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         volumes:
             - /etc/ssl/creds:/home/app/creds
@@ -48,6 +48,3 @@ services:
             BIN: ./server/bin/
             OUTPUT_FILES: ./server/output/
             USE_AUTH: "true"
-
-            # 172.17.0.1
-            CONSUL_LEADER: 172.17.0.1 # Change
