@@ -7,9 +7,10 @@ const { auth } = require("os-npm-util");
 
 const health = require("./health.js")
 
+// TODO: Consul served over http..
 const CONSUL_LEADER = auth.DOMAIN === "localhost"
     ? `http://localhost:8500`
-    : `${auth.PROTO}//consul.${auth.DOMAIN}:8500`
+    : `http://consul.${auth.DOMAIN}:8500`
 
 // TODO: This works... for now
 const CONSUL_API_IP = "172.17.0.1"
