@@ -109,7 +109,7 @@ module.exports = {
                 evt.type === "status" && this.getServerStatus(chatroom, evt, ws);
                 evt.type === "services" && this.checkDataCenters(chatroom, evt, ws);
                 evt.type === "updateCenters" && this.checkCenters();
-                evt.type === "getLeader" && ws.send(JSON.stringify({type: "getLeader", msg: CONSUL_LEADER}))
+                evt.type === "getLeader" && this.sendLeader(chatroom, evt, ws);
             })
             ws.on("close", (evt) => {
                 let peerInd = connectedPeers.findIndex((masterPeer) => masterPeer.wsId === wsId)
@@ -117,6 +117,13 @@ module.exports = {
                 console.log("Client closed. Clients in room after close evt: ", connectedPeers.length);
             })
         });
+    },
+
+    sendLeader: function(chatroom, evt, ws) {
+        this.canSendInfo(ws, (canSend) => {
+             canSend && ws.send(JSON.stringify({type: "getLeader", msg: CONSUL_LEADER}))
+             !canSend && ws.send(JSON.stringify({type: "getLeader", msg: ""}))
+        })
     },
 
     getServerStatus: function (chatroom, evt, ws) {
