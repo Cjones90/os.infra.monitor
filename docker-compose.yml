@@ -2,7 +2,7 @@ version: "3"
 services:
     main:
         build: .
-        image: jestrr/monitor:0.12.2
+        image: jestrr/monitor:0.12.3
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         volumes:
             - /etc/ssl/creds:/home/app/creds
@@ -35,7 +35,7 @@ services:
             # HOST:CONTAINER
             # Host WS Port:Container WS Port
             # - "172.17.0.1:4040:4000" # Swarm dev
-            # - "172.17.0.1:4041:4000" # Swarm dev
+            # - "172.17.0.1:4041:4001" # Swarm dev
             - "4040:4000"            # Prod
             - "4041:4001"            # Prod
         labels:

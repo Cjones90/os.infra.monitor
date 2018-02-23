@@ -24,12 +24,11 @@ const docker_creds = require("/root/.docker/config.json").auths["https://index.d
 
 const LATEST_NUM_OF_TAGS = 10;
 
-const REFRESH_TOKEN_INTERVAL = 1000 * 60 * 5;
-const REFRESH_REPO_INTERVAL = 1000 * 60 * 3;
-setTimeout(getServices, 500)                    // Initially populate
-setTimeout(refreshToken, 1000)                    // Initially populate
-setInterval(refreshToken, REFRESH_TOKEN_INTERVAL) // Refresh every 5 minutes
-setInterval(refreshRepos, REFRESH_REPO_INTERVAL) // Refresh every 3 minutes
+const REFRESH_REPO_INTERVAL = 1000 * 60 * 2.6;
+
+getServices()                                   // Initially populate
+setTimeout(refreshRepos, 1000)                    // Initially populate
+setInterval(refreshRepos, REFRESH_REPO_INTERVAL) // Refresh every 2.6 minutes
 
 const routes = function (req, res) {
 
@@ -155,6 +154,10 @@ function getToken(reponame) {
         if(!apps || !apps.dockerOrg || !docker_creds) {
             return reject("No docker credentials or incorrect docker org")
         }
+        if(apps.repos[reponame].token && apps.repos[reponame].exp < new Date()) {
+            resolve({token: apps.repos[reponame].token, reponame})
+        }
+
         let customHeaders = {
             "Accept": "application/json",
             "Authorization": `Basic ${docker_creds}`
@@ -210,20 +213,22 @@ function getTags({token, reponame}) {
             res.on("end", () => {
                 let res = JSON.parse(raw)
                 if(!res.tags) { return reject("Unable to retrieve tags") }
-                res.tags.sort((a, b) => {
-                    let splitA = a.split(".")
-                    let splitB = b.split(".")
-                    if(Number(splitA[0]) > Number(splitB[0])) { return 1 }
-                    if(Number(splitA[0]) < Number(splitB[0])) { return -1 }
-
-                    if(Number(splitA[1]) > Number(splitB[1])) { return 1 }
-                    if(Number(splitA[1]) < Number(splitB[1])) { return -1 }
-
-                    if(Number(splitA[2]) > Number(splitB[2])) { return 1 }
-                    if(Number(splitA[2]) < Number(splitB[2])) { return -1 }
+                // Remove latest tag
+                res.tags.splice(res.tags.findIndex((t)=>t==="latest"), 1)
+                // Sort by 0.X.X -> X.0.X -> X.X.0
+                let sort = (splitA, splitB) => {
+                    for(let i = 0; i < splitA.length; i++) {
+                        if(Number(splitA[i]) > Number(splitB[i])) { return 1 }
+                        if(Number(splitA[i]) < Number(splitB[i])) { return -1 }
+                    }
                     return 0
-                })
-                apps.repos[reponame].tags = res.tags.reverse().splice(0, LATEST_NUM_OF_TAGS)
+                }
+                res.tags.sort((a, b) => sort(a.split("."), b.split(".")))
+                // Reverse and return LATEST_NUM_OF_TAGS
+                res.tags = res.tags.reverse().splice(0, LATEST_NUM_OF_TAGS)
+                // Insert latest back at front
+                res.tags.unshift("latest")
+                apps.repos[reponame].tags = res.tags;
                 resolve()
             })
         }
@@ -233,28 +238,16 @@ function getTags({token, reponame}) {
     })
 }
 
-function refreshToken() {
+function refreshRepos() {
     let allPromises = []
     if(!apps || !apps.repos) {
         return console.log("No repos available to get tags for")
     }
     Object.keys(apps.repos).forEach((reponame) => {
-        // If token expired, get token, otherwise just get tags
-        if(apps.repos[reponame].exp < new Date()) {
-            allPromises.push(getToken(reponame).then(getTags))
-        }
+        allPromises.push(getToken(reponame).then(getTags))
     })
-    Promise.all(allPromises).then(() => console.log("Refreshed Token"))
-    .catch((e) => console.log("ERR - ROUTES.REFRESHTOKEN:", e))
-}
-
-function refreshRepos() {
-    if(apps && apps.repos) {
-        Object.keys(apps.repos).forEach((reponame) =>
-            getTags({token: apps.repos[reponame].token, reponame})
-            .catch((e) => console.log("ERR - ROUTES.REFRESHREPO:", e))
-        )
-    }
+    Promise.all(allPromises).then(() => console.log("Refreshed Repos") )
+    .catch((e) => console.log("ERR - ROUTES.REFRESHREPO:", e))
 }
 
 function getRepos(headers, accessReq, respond) {
