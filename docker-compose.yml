@@ -1,8 +1,8 @@
-version: "3"
+version: "3.3"
 services:
     main:
         build: .
-        image: jestrr/monitor:0.12.4
+        image: jestrr/monitor:0.13.0
         entrypoint: ["pm2", "start", "/home/app/src/config/pm2.config.js", "--no-daemon"]
         volumes:
             - /etc/ssl/creds:/home/app/creds
@@ -21,7 +21,7 @@ services:
         extra_hosts:
             localmachine: "172.17.0.1"
         deploy:
-            replicas: 1
+            replicas: 2
             update_config:
                 parallelism: 1
                 delay: 10s
@@ -31,6 +31,8 @@ services:
             placement:
                 constraints:
                     - node.role == manager
+                preferences:
+                  - spread: node.labels.dc
         ports:
             # HOST:CONTAINER
             # Host WS Port:Container WS Port
