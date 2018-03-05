@@ -12,6 +12,8 @@ const CONSUL_LEADER = auth.DOMAIN === "localhost"
     ? `http://localhost:8500`
     : `http://consul.${auth.DOMAIN}:8500`
 
+// TODO: Maybe switch over to the npm consul or register handlers to listen
+//   for changes to the cluster instead of sending GET requests.
 // TODO: This works... for now
 const CONSUL_API_IP = "172.17.0.1"
 const CONSUL_API_PORT = "8500"
@@ -46,6 +48,7 @@ module.exports = {
             ? { port: opts }
             : { server: opts }
         this.wss = new WebSocket.Server(serverInit);
+        this.registerGracefulShutdown(this.wss)
         this.wss.broadcast = (data) => {
             this.wss.clients.forEach((client) => {
                 if(client.readyState === WebSocket.OPEN) {
@@ -191,7 +194,7 @@ module.exports = {
             })
             fetching = false;
         })
-        .catch((e) => { fetching = false; console.log("CAUGHT:", e) })
+        .catch((e) => { fetching = false; console.log("ERR - WS.FETCHCONSULINFO:\n", e) })
     },
 
     formTree(cb) {
@@ -236,7 +239,7 @@ module.exports = {
 
     getDataCenters: function () {
         return new Promise((resolve, reject) => {
-            this.sendGet("/v1/catalog/datacenters", (err, dcs) => {
+            this.sendGet("/v1/catalog/datacenters?stale", (err, dcs) => {
                 if(err) { return reject(err) }
                 resolve(dcs)
             })
@@ -245,7 +248,7 @@ module.exports = {
 
     getNodes: function (dc) {
         return new Promise((resolve, reject) => {
-            this.sendGet(`/v1/catalog/nodes?dc=${dc}`, (err, machines) => {
+            this.sendGet(`/v1/catalog/nodes?dc=${dc}&stale`, (err, machines) => {
                 if(err) { return reject(err) }
                 resolve(machines)
             })
@@ -253,7 +256,7 @@ module.exports = {
     },
     getServices: function (node, dc) {
         return new Promise((resolve, reject) => {
-            this.sendGet(`/v1/catalog/node/${node}?dc=${dc}`, (err, services) => {
+            this.sendGet(`/v1/catalog/node/${node}?dc=${dc}&stale`, (err, services) => {
                 if(err) { return reject(err) }
                 resolve(services)
             })
@@ -261,7 +264,7 @@ module.exports = {
     },
     getChecks: function (node, dc) {
         return new Promise((resolve, reject) => {
-            this.sendGet(`/v1/health/node/${node}?dc=${dc}`, (err, checks) => {
+            this.sendGet(`/v1/health/node/${node}?dc=${dc}&stale`, (err, checks) => {
                 if(err) { return reject(err) }
                 resolve(checks)
             })
@@ -300,7 +303,7 @@ module.exports = {
                 try { callback(null, JSON.parse(response)) }
                 catch(e) {
                     fetching = false;
-                    console.log("Failed for: "+JSON.stringify(opts));
+                    console.log("ERR - WS.SENDGET:\n", JSON.stringify(opts));
                     callback(e)
                 }
             });
@@ -324,5 +327,20 @@ module.exports = {
         .catch((e) => { console.log("ERR - WS.CHECKACCESS:\n", e); callback({status: false}) })
     },
 
+
+    registerGracefulShutdown: function(server) {
+        let close = () => {
+            console.log("Received SIG signal, shutting down");
+            server.close(() => {
+                console.log("Closed out all connections successfully");
+                process.exit();
+            })
+        }
+        process.on("SIGTERM", close)
+        process.on("SIGHUP", close)
+        process.on("SIGINT", close)
+        process.on("SIGQUIT", close)
+        process.on("SIGABRT", close)
+    },
 
 }

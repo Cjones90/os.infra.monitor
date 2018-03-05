@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 const http = require("http");
 const https = require("https");
@@ -23,6 +23,8 @@ const server = {
         let keyExists = fs.existsSync("creds/privkey.pem")
 
         // Ensure we dont attempt to start httpsserver without certs
+        // TODO: Stop reading in volume mounted files/certs, use docker secrets/config
+        //   or serve up http since its posible to be behind a reverse proxy
         if(keyExists) {
             options = {
                 key: fs.readFileSync("creds/privkey.pem", "utf8"),
@@ -37,7 +39,23 @@ const server = {
         let serverType = keyExists && options.key !== "" ? "https" : "http"
         server.listen(PORT, console.log(`${serverType} server running`));
         ws.init(server)
+        this.registerGracefulShutdown(server)
         if(REGISTER_SERVICE) { service.register(); }
+    },
+
+    registerGracefulShutdown: function(server) {
+        let close = () => {
+            console.log("Received SIG signal, shutting down");
+            server.close(() => {
+                console.log("Closed out all connections successfully");
+                process.exit();
+            })
+        }
+        process.on("SIGTERM", close)
+        process.on("SIGHUP", close)
+        process.on("SIGINT", close)
+        process.on("SIGQUIT", close)
+        process.on("SIGABRT", close)
     },
 
     serverListener: function (req, res) {
@@ -69,8 +87,14 @@ const server = {
                 filePath = OUTPUT_FILES+file.replace("download/", "");
             }
 
+            res.setHeader('Cache-Control', 'public, max-age=' + (1000 * 60 * 60 * 24 * 30))
             res.writeHead(200, {"Content-Type": contentType});
-            fs.readFile(filePath, (err, data) => res.end(data))
+            fs.readFile(filePath, "utf8", (err, data) => {
+                if(filePath.match(`${PUB_FILES}index.html`)) {
+                    data = data.replace(/%%VERSION%%/, service.IMAGE_VER)
+                }
+                res.end(data)
+            })
         }
     }
 }

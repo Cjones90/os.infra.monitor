@@ -1,10 +1,10 @@
 version: "3.5"
 services:
-    main:
+    dev:
         build:
             context: .
-            target: prod
-        image: jestrr/monitor:0.14.0-alpine
+            target: src
+        image: jestrr/monitor:dev
         entrypoint: ["pm2-runtime", "server/pm2.config.js"]
         volumes:
             - /etc/ssl/creds:/home/app/creds
@@ -13,8 +13,10 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock
             - /usr/bin/docker:/usr/local/bin/docker
 
-            - /root/.docker/config.json:/root/.docker/config.json
-            - /root/repos:/home/app/repos
+            - $HOME/.docker/config.json:/root/.docker/config.json
+            - $HOME/code/temprepo:/home/app/repos
+            - ./src:/home/app/src
+            - ./server:/home/app/server
         extra_hosts:
             localmachine: "172.17.0.1"
         deploy:
@@ -43,3 +45,7 @@ services:
             - "4041:4001"            # Prod
         labels:
             com.consul.service: monitor
+        environment:
+            REGISTER_SERVICE:   "false"
+            USE_AUTH:           "false"
+            USE_CONSUL_DB:      "false"

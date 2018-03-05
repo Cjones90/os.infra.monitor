@@ -5,7 +5,7 @@
         "request": "^2.79.0",
         "ws": "^3.0.0",
         "consul": "^0.29.0",
-        "os-npm-util": "git+https://github.com/Cjones90/os.npm.util.git#0.2.2"
+        "os-npm-util": "https://github.com/Cjones90/os.npm.util/tarball/master#0.2.5"
     },
     "devDependencies": {
         "babel-core": "^6.22.1",
@@ -21,10 +21,14 @@
         "react-dom": "^15.3.0",
         "style-loader": "^0.13.1",
         "webpack": "^1.14.0",
+        "html-webpack-plugin": "^2.30.1",
         "d3": "4.8.0"
     },
     "scripts": {
         "watch": "webpack --config='src/config/webpack.config.js' --progress --colors --watch",
         "release": "webpack --config='src/config/webpack.config.js' --progress --colors --optimize-minimize"
-    }
+    },
+    "description": "Monitor infrastructure",
+    "repository": "https://github.com/Cjones90/os.infra.monitor.git",
+    "license": "MIT"
 }

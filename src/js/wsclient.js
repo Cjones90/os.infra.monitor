@@ -14,6 +14,8 @@ const getCookie = (name) => {
     }, '')
 }
 
+
+
 export default class WS {
 
     constructor() {
@@ -21,6 +23,7 @@ export default class WS {
         this.retries = 0
         this.maxRetries = 15
         this.connecting = false;
+        window.ws = null
         this.connect();
     }
 
@@ -47,6 +50,7 @@ export default class WS {
 
     handleWsClose(evt) {
         console.log("Closed:", evt);
+        this.ws = null;
         this.connecting = false;
         if(this.retries < this.maxRetries) {
             console.log("Retrying connection " + (this.maxRetries - this.retries) + " more time(s)");
@@ -57,11 +61,12 @@ export default class WS {
 
     handleWsErr(err) {
         console.log("Err:", err);
-        if(this.retries < this.maxRetries) {
-            console.log("Retrying connection " + (this.maxRetries - this.retries) + " more time(s)");
-            setTimeout(this.connect.bind(this, true), (this.defaultRetryTime * ++this.retries))
-        }
-        else { console.log("Server appears down"); }
+        // this.ws = null;
+        // if(this.retries < this.maxRetries) {
+        //     console.log("Retrying connection " + (this.maxRetries - this.retries) + " more time(s)");
+        //     setTimeout(this.connect.bind(this, true), (this.defaultRetryTime * ++this.retries))
+        // }
+        // else { console.log("Server appears down"); }
     }
 
     reattachListeners () {

@@ -26,9 +26,10 @@ const LATEST_NUM_OF_TAGS = 10;
 
 const REFRESH_REPO_INTERVAL = 1000 * 60 * 2.6;
 
-getServices()                                   // Initially populate
-setTimeout(refreshRepos, 1000)                    // Initially populate
-setInterval(refreshRepos, REFRESH_REPO_INTERVAL) // Refresh every 2.6 minutes
+getServices()                                       // Initially populate
+let retryServices = setInterval(getServices, 4000)  // Retry every 4 secodns until retrieved
+setTimeout(refreshRepos, 1000)                      // Initially populate
+setInterval(refreshRepos, REFRESH_REPO_INTERVAL)    // Refresh every 2.6 minutes
 
 const routes = function (req, res) {
 
@@ -73,6 +74,7 @@ const routes = function (req, res) {
 
 // TODO: Temporary solution storing apps on auth server
 function getServices() {
+    if(apps.services.length) { return clearInterval(retryServices) }
     let options = {
         hostname: auth.HOST,
         port: auth.PORT,
@@ -80,12 +82,14 @@ function getServices() {
         method: "POST"
     }
     let respondCallback = (res) => {
+        if(res.statusCode !== 200) { console.log(res, "^STATUS CODE NOT 200^"); }
         let raw = ""
         res.on("data", (data) => raw += data.toString())
         res.on("err", (err) => { console.log("ERR - ROUTES.GETSERVICES\n", err) })
         res.on("end", () => {
-            let res = raw ? JSON.parse(raw) : ""
-            apps = res.status ? res.data : ""
+            if(res.statusCode !== 200) { console.log(raw, "^STATUS CODE NOT 200^"); }
+            let jsonRes = raw ? JSON.parse(raw) : ""
+            apps = jsonRes.status ? jsonRes.data : ""
             apps && apps.services.forEach((name) => {
                 apps.repos[name] = {
                     token: "",
