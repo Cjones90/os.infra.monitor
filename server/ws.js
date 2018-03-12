@@ -5,18 +5,22 @@ const http = require("http");
 const WebSocket = require("ws");
 const { auth } = require("os-npm-util");
 
-const health = require("./health.js")
-
-// TODO: Consul served over http..
-const CONSUL_LEADER = auth.DOMAIN === "localhost"
-    ? `http://localhost:8500`
-    : `http://consul.${auth.DOMAIN}:8500`
+// TODO: Get all the info needed from ./health.js implementation and remove
+// const health = require("./health.js")
+const serverState = require("./serverState.js");
 
 // TODO: Maybe switch over to the npm consul or register handlers to listen
 //   for changes to the cluster instead of sending GET requests.
 // TODO: This works... for now
 const CONSUL_API_IP = "172.17.0.1"
 const CONSUL_API_PORT = "8500"
+
+const DEV_ENV = process.env.DEV_ENV ? JSON.parse(process.env.DEV_ENV) : ""
+const DEFAULT_AUTH_URL = `http://auth_${DEV_ENV?"dev":"main"}:80`
+// Pretty sure this is the instance where we should be using a constructor
+// I feel we're unintentionally sharing state with routes.js
+auth.USE_AUTH = process.env.USE_AUTH ? JSON.parse(process.env.USE_AUTH) : false;
+auth.URL = process.env.AUTH_URL ? process.env.AUTH_URL : DEFAULT_AUTH_URL
 
 let root = {
     name: "Root",
@@ -42,12 +46,38 @@ const ROSTER_WS_PORT = 4001;
 
 // TODO: Make functional, expose only necessary functions
 
+
+
+
 module.exports = {
+
+    wss: null,
+
+    registerGracefulShutdown: function(server) {
+        let close = () => {
+            console.log("WS received SIG signal, shutting down");
+            serverState.changeWebSocketState(false)
+            server.close(() => {
+                console.log("Closed out all WS connections successfully");
+            })
+        }
+        process.on("SIGTERM", close)
+        process.on("SIGHUP", close)
+        process.on("SIGINT", close)
+        process.on("SIGQUIT", close)
+        process.on("SIGABRT", close)
+    },
+
+    // TODO: Need to more thoroughly test WS connections/handlers/events like we've
+    //   done with mongo and redis
+    // At the moment I think when the WS server goes down it won't go back up by itself
     init: function(opts) {
         let serverInit = typeof(opts) === "number"
             ? { port: opts }
             : { server: opts }
         this.wss = new WebSocket.Server(serverInit);
+        this.wss.on("listening", () => { serverState.changeWebSocketState(true) })
+        this.wss.on("error", () => { serverState.changeWebSocketState(false) })
         this.registerGracefulShutdown(this.wss)
         this.wss.broadcast = (data) => {
             this.wss.clients.forEach((client) => {
@@ -63,25 +93,24 @@ module.exports = {
         // TODO: Turn into pub/sub model, only broadcast when changes happen vs checking on an interval
         setInterval(this.checkCenters.bind(this), BROADCAST_INTERVAL)
         console.log("WSS running");
+        this.checkCenters()
+
+        // Started from the bottom now we here
         // RosterServer.init(ROSTER_WS_PORT);
         // health.registerListeners(RosterServer);
         // health.attachWSConnection(this.wss)
-
-        this.checkCenters()
     },
 
     checkCenters: function () {
         this.fetchConsulInfo()
         .then(() => this.formTree(this.broadcastDataCenters.bind(this)))
-        .catch((e) => {
-            console.log("Problem fetching a: ", e);
-        })
+        .catch((e) => console.log("ERR - WS.CHECKCENTERS:\n", e))
     },
 
     startKeepAliveChecks: function () {
         this.wss.clients.forEach((client) => {
             let clientId = client.upgradeReq.headers['sec-websocket-key'];
-            this.canSend(client) && client.send(JSON.stringify({type: "ping"}))
+            client.readyState === 1 && client.send(JSON.stringify({type: "ping"}))
             let peerInd = connectedPeers.findIndex((masterPeer) => masterPeer.wsId === clientId)
             let peer = connectedPeers[peerInd];
             peer && ++peer.pings && peer.pings > TTL && connectedPeers.splice(peerInd, 1)
@@ -112,7 +141,7 @@ module.exports = {
                 evt.type === "status" && this.getServerStatus(chatroom, evt, ws);
                 evt.type === "services" && this.checkDataCenters(chatroom, evt, ws);
                 evt.type === "updateCenters" && this.checkCenters();
-                evt.type === "getLeader" && this.sendLeader(chatroom, evt, ws);
+                evt.type === "getConsulPort" && this.sendConsulPort(chatroom, evt, ws);
             })
             ws.on("close", (evt) => {
                 let peerInd = connectedPeers.findIndex((masterPeer) => masterPeer.wsId === wsId)
@@ -122,22 +151,14 @@ module.exports = {
         });
     },
 
-    sendLeader: function(chatroom, evt, ws) {
+    sendConsulPort: function(chatroom, evt, ws) {
         this.canSendInfo(ws, (canSend) => {
-             canSend && ws.send(JSON.stringify({type: "getLeader", msg: CONSUL_LEADER}))
-             !canSend && ws.send(JSON.stringify({type: "getLeader", msg: ""}))
+             canSend && ws.send(JSON.stringify({type: "getConsulPort", msg: CONSUL_API_PORT}))
+             !canSend && ws.send(JSON.stringify({type: "getConsulPort", msg: ""}))
         })
     },
 
-    getServerStatus: function (chatroom, evt, ws) {
-        health.getServerStatus((apps) => {
-            let response = { type: "status", apps: apps }
-            ws.send(JSON.stringify(response))
-        })
-    },
-
-    canSend: function (ws) { return ws.readyState === 1 },
-
+    // Add credentials to ws client
     addHeaders: function (chatroom, evt, ws) { ws.headers = evt.headers },
 
     canSendInfo: function (ws, callback) {
@@ -197,6 +218,11 @@ module.exports = {
         .catch((e) => { fetching = false; console.log("ERR - WS.FETCHCONSULINFO:\n", e) })
     },
 
+    // TODO: Probably more client side but, collapse/stack multiple checks so it's
+    //     viewed as a service with num containers, and clicking it reveals the containers.
+    // In the MUCH FURTHER future, we click a container and get its logs
+    // Or click a service to get the service logs
+    // We also don't currently have a way to deregister a service, only the checks
     formTree(cb) {
         let children = []
         datacenters.forEach((dc, ind) => {
@@ -218,28 +244,9 @@ module.exports = {
         cb();
     },
 
-    // Used for tidy tree - not relevent with checks and services graph we're making now
-    // formTree(cb) {
-    //     let children = []
-    //     datacenters.forEach((dc, ind) => {
-    //         let dcJson = { name: dc, children: [] }
-    //         let filteredNodes = nodes.filter((node) => dc === node.Datacenter)
-    //         filteredNodes.forEach((node, ind) => {
-    //             let nodeJson = {
-    //                 name: node.Node,
-    //                 children: node.Services.map((key) => { return { name: key, size: 1} })
-    //             }
-    //             dcJson.children.push(nodeJson)
-    //         })
-    //         children.push(dcJson)
-    //     })
-    //     root.children = children;
-    //     cb();
-    // },
-
     getDataCenters: function () {
         return new Promise((resolve, reject) => {
-            this.sendGet("/v1/catalog/datacenters?stale", (err, dcs) => {
+            this.sendGet("/v1/catalog/datacenters", (err, dcs) => {
                 if(err) { return reject(err) }
                 resolve(dcs)
             })
@@ -248,7 +255,7 @@ module.exports = {
 
     getNodes: function (dc) {
         return new Promise((resolve, reject) => {
-            this.sendGet(`/v1/catalog/nodes?dc=${dc}&stale`, (err, machines) => {
+            this.sendGet(`/v1/catalog/nodes?dc=${dc}`, (err, machines) => {
                 if(err) { return reject(err) }
                 resolve(machines)
             })
@@ -256,7 +263,7 @@ module.exports = {
     },
     getServices: function (node, dc) {
         return new Promise((resolve, reject) => {
-            this.sendGet(`/v1/catalog/node/${node}?dc=${dc}&stale`, (err, services) => {
+            this.sendGet(`/v1/catalog/node/${node}?dc=${dc}`, (err, services) => {
                 if(err) { return reject(err) }
                 resolve(services)
             })
@@ -264,7 +271,7 @@ module.exports = {
     },
     getChecks: function (node, dc) {
         return new Promise((resolve, reject) => {
-            this.sendGet(`/v1/health/node/${node}?dc=${dc}&stale`, (err, checks) => {
+            this.sendGet(`/v1/health/node/${node}?dc=${dc}`, (err, checks) => {
                 if(err) { return reject(err) }
                 resolve(checks)
             })
@@ -283,7 +290,6 @@ module.exports = {
              canSend && ws.send(JSON.stringify(response))
              !canSend && ws.send(JSON.stringify(empty))
         })
-
     },
 
     sendGet: function (url, callback) {
@@ -296,19 +302,17 @@ module.exports = {
         let response = "";
         let req = http.get(opts, (res) => {
             res.setEncoding('utf8');
-            res.on('data', (chunk) => {
-                response += chunk.toString();
-            });
+            res.on('data', (chunk) => { response += chunk.toString(); });
             res.on('end', () => {
                 try { callback(null, JSON.parse(response)) }
                 catch(e) {
                     fetching = false;
-                    console.log("ERR - WS.SENDGET:\n", JSON.stringify(opts));
+                    console.log("ERR - WS.SENDGET1:\n", JSON.stringify(opts));
                     callback(e)
                 }
             });
         })
-        req.on("error", (e) => { fetching = false; console.log("ERR:", e) })
+        req.on("error", (e) => { fetching = false; console.log("ERR - WS.SENDGET2:\n", e) })
     },
 
     checkAccess: function (headers, accessReq, callback) {
@@ -328,19 +332,36 @@ module.exports = {
     },
 
 
-    registerGracefulShutdown: function(server) {
-        let close = () => {
-            console.log("Received SIG signal, shutting down");
-            server.close(() => {
-                console.log("Closed out all connections successfully");
-                process.exit();
-            })
-        }
-        process.on("SIGTERM", close)
-        process.on("SIGHUP", close)
-        process.on("SIGINT", close)
-        process.on("SIGQUIT", close)
-        process.on("SIGABRT", close)
-    },
+
+
+
+
+
+    // getServerStatus: function (chatroom, evt, ws) {
+    //     health.getServerStatus((apps) => {
+    //         let response = { type: "status", apps: apps }
+    //         ws.send(JSON.stringify(response))
+    //     })
+    // },
+
+    // Used for tidy tree - not relevent with checks and services graph we're making now
+    // formTree(cb) {
+    //     let children = []
+    //     datacenters.forEach((dc, ind) => {
+    //         let dcJson = { name: dc, children: [] }
+    //         let filteredNodes = nodes.filter((node) => dc === node.Datacenter)
+    //         filteredNodes.forEach((node, ind) => {
+    //             let nodeJson = {
+    //                 name: node.Node,
+    //                 children: node.Services.map((key) => { return { name: key, size: 1} })
+    //             }
+    //             dcJson.children.push(nodeJson)
+    //         })
+    //         children.push(dcJson)
+    //     })
+    //     root.children = children;
+    //     cb();
+    // },
+
 
 }

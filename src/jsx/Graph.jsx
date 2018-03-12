@@ -22,6 +22,8 @@ class Graph extends React.Component {
         }
         this.checkDataCenters = this.checkDataCenters.bind(this);
         this.handleWsMsg = this.handleWsMsg.bind(this);
+        this.handleConsulPort = this.handleConsulPort.bind(this);
+        this.handleServices = this.handleServices.bind(this);
         this.createTidyTree = this.createTidyTree.bind(this);
         this.adjustToolTip = this.adjustToolTip.bind(this);
         this.selectMachine = this.selectMachine.bind(this);
@@ -39,14 +41,25 @@ class Graph extends React.Component {
     checkDataCenters() {
         window.ws.send({type: "auth"})
         window.ws.send({type: "services"})
-        window.ws.send({type: "getLeader"})
+        window.ws.send({type: "getConsulPort"})
     }
 
     handleWsMsg(msg) {
         let parsed = JSON.parse(msg.data);
         // parsed.type === "services" && this.createTidyTree(parsed.root)
         parsed.type === "services" && this.handleServices(parsed.root)
-        parsed.type === "getLeader" && this.setState({leader: parsed.msg})
+        parsed.type === "getConsulPort" && this.handleConsulPort(parsed.msg)
+    }
+
+    handleConsulPort(consulPort) {
+        let isLocal = location.hostname.match(/localhost|\d/)
+        // Only http atm - This way is purely for convenience between all the envs atm
+        let splitHost = location.hostname.split(".")
+        let domain = splitHost.slice(-2).join(".")
+        let consulHost = isLocal
+            ? `http://${location.hostname}:${consulPort}`
+            : `http://consul.${domain}:${consulPort}`
+        this.setState({leader: consulHost})
     }
 
     handleServices(root) {

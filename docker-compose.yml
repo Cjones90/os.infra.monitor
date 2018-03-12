@@ -4,19 +4,14 @@ services:
         build:
             context: .
             target: prod
-        image: jestrr/monitor:0.14.0-alpine
-        entrypoint: ["pm2-runtime", "server/pm2.config.js"]
-        volumes:
-            - /etc/ssl/creds:/home/app/creds
-            - /etc/serverkey:/home/app/serverkey
-            - /etc/domain:/home/app/domain
-            - /var/run/docker.sock:/var/run/docker.sock
-            - /usr/bin/docker:/usr/local/bin/docker
-
-            - /root/.docker/config.json:/root/.docker/config.json
-            - /root/repos:/home/app/repos
-        extra_hosts:
-            localmachine: "172.17.0.1"
+        image: jestrr/monitor:0.15.0
+        networks:
+            - proxy
+        ports:
+            - "4050:80"
+        # secrets:
+        #     - apps
+        #     - dockerconfig
         deploy:
             replicas: 2
             update_config:
@@ -27,19 +22,20 @@ services:
                 order: start-first
             restart_policy:
                 max_attempts: 3
-                # condition: on-failure
+                condition: on-failure
             placement:
                 constraints:
                     - node.role == manager
                 preferences:
                     - spread: node.labels.dc
                     - spread: node.labels.az
-        ports:
-            # HOST:CONTAINER
-            # Host WS Port:Container WS Port
-            # - "172.17.0.1:4040:4000" # Swarm dev
-            # - "172.17.0.1:4041:4001" # Swarm dev
-            - "4040:4000"            # Prod
-            - "4041:4001"            # Prod
-        labels:
-            com.consul.service: monitor
+
+networks:
+    proxy:
+        external: true
+
+# secrets:
+#     apps:
+#         file: $HOME/code/apps.json
+#     dockerconfig:
+#         file: /root/.docker/config.json

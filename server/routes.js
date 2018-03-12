@@ -8,28 +8,45 @@ const { fork, spawn } = require("child_process");
 
 const { service, auth } = require("os-npm-util");
 
-const health = require("./health.js");
-
-let keyExists = fs.existsSync("serverkey")
-let key = keyExists ? fs.readFileSync("serverkey", "utf8") : "";
-
-let apps = {
-    services: [],
-    serviceToRepo: {},
-    repos: {},
-    dockerOrg: ""
-}
-
-const docker_creds = require("/root/.docker/config.json").auths["https://index.docker.io/v1/"].auth
+// TODO: Get all the info needed from ./health.js implementation and remove
+// const health = require("./health.js");
 
 const LATEST_NUM_OF_TAGS = 10;
-
 const REFRESH_REPO_INTERVAL = 1000 * 60 * 2.6;
 
-getServices()                                       // Initially populate
-let retryServices = setInterval(getServices, 4000)  // Retry every 4 secodns until retrieved
-setTimeout(refreshRepos, 1000)                      // Initially populate
-setInterval(refreshRepos, REFRESH_REPO_INTERVAL)    // Refresh every 2.6 minutes
+const TOGGLE_SERVICE_LAUNCH_FEATURE = process.TOGGLE_SERVICE_LAUNCH_FEATURE
+    ? JSON.parse(TOGGLE_SERVICE_LAUNCH_FEATURE)
+    : false
+
+const DEV_ENV = process.env.DEV_ENV ? JSON.parse(process.env.DEV_ENV) : ""
+const DEFAULT_AUTH_URL = `http://auth_${DEV_ENV?"dev":"main"}:80`
+// Pretty sure this is the instance where we should be using a constructor
+// I feel we're unintentionally sharing state with ws.js
+auth.USE_AUTH = process.env.USE_AUTH ? JSON.parse(process.env.USE_AUTH) : false;
+auth.URL = process.env.AUTH_URL ? process.env.AUTH_URL : DEFAULT_AUTH_URL
+
+
+let docker_config = ""
+let docker_creds = ""
+let apps = ""
+if(TOGGLE_SERVICE_LAUNCH_FEATURE) {
+    docker_config = fs.existsSync(`/run/secrets/dockerconfig`) ? fs.readFileSync("/run/secrets/dockerconfig") : ""
+    docker_creds = docker_config ? JSON.parse(docker_config).auths["https://index.docker.io/v1/"].auth : ""
+    apps = require("/run/secrets/apps")
+    // NOTE: Structure of apps.json
+    // let apps = {
+    //     services: ["list", "of", "serviceNames"],
+    //     serviceToRepo: {
+    //         "serviceName": "folderName",
+    //     },
+    //     repos: {},
+    //     dockerOrg: ""
+    // }
+    setTimeout(refreshRepos, 1000)                      // Initially populate
+    setInterval(refreshRepos, REFRESH_REPO_INTERVAL)    // Refresh every 2.6 minutes
+}
+
+
 
 const routes = function (req, res) {
 
@@ -51,19 +68,26 @@ const routes = function (req, res) {
         let headers = req.headers;
 
         switch(requrl) {
-            case "/api/put/deregisterService": service.deregister(parsed.service, parsed.ip, respond);
+            case "/api/put/deregistercheck": service.deregisterCheck(parsed.check, respond);
             break;
 
             case "/api/get/username": getUser(headers, "user", respond) //username / key
             break;
-            case "/api/get/repos": getRepos(headers, "user", respond) //username / key
+            // TODO: Worry about showing/lauching services through the web UI once this
+            //   becomes a good feature to add
+            case "/api/get/repos":
+                TOGGLE_SERVICE_LAUNCH_FEATURE ? getRepos(headers, "user", respond) : respond({status: false, data: "Not in service"}) //username / key
             break;
             case "/api/get/menu": auth.getMenu(headers, respond) //username / key
             break;
 
             case "/api/post/logout": sendLogout(headers, respond) //username / key
             break;
-            case "/api/post/launchservice": launchService(headers, parsed, respond) //username / key
+
+            // TODO: Worry about showing/lauching services through the web UI once this
+            //   becomes a good feature to add
+            case "/api/post/launchservice":
+                TOGGLE_SERVICE_LAUNCH_FEATURE ? launchService(headers, parsed, respond) : respond({status: false, data: "Not in service"}) //username / key
             break;
             default: respond();
         }
@@ -72,41 +96,8 @@ const routes = function (req, res) {
 
 }
 
-// TODO: Temporary solution storing apps on auth server
-function getServices() {
-    if(apps.services.length) { return clearInterval(retryServices) }
-    let options = {
-        hostname: auth.HOST,
-        port: auth.PORT,
-        path: "/api/post/monitor",
-        method: "POST"
-    }
-    let respondCallback = (res) => {
-        if(res.statusCode !== 200) { console.log(res, "^STATUS CODE NOT 200^"); }
-        let raw = ""
-        res.on("data", (data) => raw += data.toString())
-        res.on("err", (err) => { console.log("ERR - ROUTES.GETSERVICES\n", err) })
-        res.on("end", () => {
-            if(res.statusCode !== 200) { console.log(raw, "^STATUS CODE NOT 200^"); }
-            let jsonRes = raw ? JSON.parse(raw) : ""
-            apps = jsonRes.status ? jsonRes.data : ""
-            apps && apps.services.forEach((name) => {
-                apps.repos[name] = {
-                    token: "",
-                    exp: new Date(),
-                    tags: []
-                }
-            })
-        })
-    }
-    let req = auth.PROTO === "http:"
-        ? http.request(options, respondCallback)
-        : https.request(options, respondCallback)
-    req.on("error", (e) => console.log("ERR - ROUTES.GETSERVICES\n", e))
-    req.write(JSON.stringify({key: key}));
-    req.end();
-}
-
+// TODO: Maybe start caching credentials for a minute at a time to prevent
+// multiple consecutive and frequent calls
 function checkAccess(headers, app, accessReq, callback) {
     auth.checkAccess({headers, app, accessReq})
     .then(({ status, hasPermissions }) => {

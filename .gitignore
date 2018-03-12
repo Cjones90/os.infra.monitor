@@ -3,6 +3,7 @@ logs
 .git
 dumps
 
+apps.json
 app.bundle.js
 npm-debug.log
 .DS_Store

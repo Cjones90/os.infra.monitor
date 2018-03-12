@@ -13,21 +13,17 @@ class SidePanel extends React.Component {
         this.state = {
             machine: props.machine
         }
-        this.deregisterService = this.deregisterService.bind(this);
+        this.deregisterCheck = this.deregisterCheck.bind(this);
     }
 
     componentWillReceiveProps(nextProps) {
-        this.setState({
-            machine: nextProps.machine
-        })
+        nextProps.machine.checks.sort((a, b) => a.Name > b.Name)
+        this.setState({ machine: nextProps.machine })
     }
 
-    deregisterService(e) {
-        let req = {
-            service: e.check.CheckID.replace("service:", ""),
-            ip: e.ip
-        }
-        api.put("/deregisterService", req, (res) => {
+    deregisterCheck(e) {
+        let req = { check: e.check.CheckID, }
+        api.put("/deregistercheck", req, (res) => {
             window.ws.send({type: "updateCenters"})
         })
     }
@@ -43,7 +39,9 @@ class SidePanel extends React.Component {
                 ? check.Output
                 : check.Status
             return (
-                <div className={`check ${check.Status}`} key={ind} onClick={this.deregisterService.bind(this, {check: check, ip: this.state.machine.address})}>
+                <div className={`check ${check.Status}`}
+                key={ind}
+                onClick={this.deregisterCheck.bind(this, {check: check, ip: this.state.machine.address})}>
                     {check.Name}: {status}
                 </div>
             )

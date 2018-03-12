@@ -5,20 +5,26 @@ services:
             context: .
             target: src
         image: jestrr/monitor:dev
-        entrypoint: ["pm2-runtime", "server/pm2.config.js"]
+        entrypoint: ["pm2-dev", "server/pm2.config.js"]
         volumes:
-            - /etc/ssl/creds:/home/app/creds
-            - /etc/serverkey:/home/app/serverkey
-            - /etc/domain:/home/app/domain
-            - /var/run/docker.sock:/var/run/docker.sock
-            - /usr/bin/docker:/usr/local/bin/docker
-
-            - $HOME/.docker/config.json:/root/.docker/config.json
-            - $HOME/code/temprepo:/home/app/repos
             - ./src:/home/app/src
             - ./server:/home/app/server
-        extra_hosts:
-            localmachine: "172.17.0.1"
+            ### TODO: Need a better way to checkout/launch new versions when
+            ###  we eventually support this better
+            ### Launching services from inside the container will be a later release
+            ###  as I think the current implementation is poor, it should go through
+            ###  the docker api, which I have yet to use
+            # - /var/run/docker.sock:/var/run/docker.sock
+            # - /usr/bin/docker:/usr/local/bin/docker
+            # - $HOME/code/temprepo:/home/app/repos
+
+        ### NOTE: You can omit/comment out networks for development
+        networks:
+            - proxy
+        ports:
+            - "4055:80"
+        labels:
+            com.consul.service: monitor
         deploy:
             replicas: 2
             update_config:
@@ -29,23 +35,33 @@ services:
                 order: start-first
             restart_policy:
                 max_attempts: 3
-                # condition: on-failure
+                condition: on-failure
             placement:
                 constraints:
                     - node.role == manager
                 preferences:
                     - spread: node.labels.dc
                     - spread: node.labels.az
-        ports:
-            # HOST:CONTAINER
-            # Host WS Port:Container WS Port
-            # - "172.17.0.1:4040:4000" # Swarm dev
-            # - "172.17.0.1:4041:4001" # Swarm dev
-            - "4040:4000"            # Prod
-            - "4041:4001"            # Prod
-        labels:
-            com.consul.service: monitor
+        healthcheck:
+            test: exit $$(curl -s http://localhost/healthcheck)
+            interval: 5s
+            timeout: 10s
+            start_period: 0s
         environment:
-            REGISTER_SERVICE:   "false"
-            USE_AUTH:           "false"
-            USE_CONSUL_DB:      "false"
+            REGISTER_SERVICE:       "false"
+            USE_CONSUL_DB:          "false"
+            USE_AUTH:               "false"
+            AUTH_URL:               ""
+            LOG_EVERY_NUM_CHECKS:   5
+            DEV_ENV:                "true"
+
+
+networks:
+    proxy:
+        external: true
+
+# secrets:
+#     dockerconfig:
+#         file: $HOME/.docker/config.json
+#     apps:
+#         file: ./apps.json
