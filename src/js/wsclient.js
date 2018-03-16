@@ -19,6 +19,7 @@ const getCookie = (name) => {
 export default class WS {
 
     constructor() {
+        this.initialRetryTime = 50
         this.defaultRetryTime = 5000
         this.retries = 0
         this.maxRetries = 15
@@ -54,7 +55,9 @@ export default class WS {
         this.connecting = false;
         if(this.retries < this.maxRetries) {
             console.log("Retrying connection " + (this.maxRetries - this.retries) + " more time(s)");
-            setTimeout(this.connect.bind(this, true), (this.defaultRetryTime * ++this.retries))
+            let retryTime = this.retries === 0 ? this.initialRetryTime : (this.defaultRetryTime * this.retries)
+            ++this.retries
+            setTimeout(this.connect.bind(this, true), retryTime)
         }
         else { console.log("Server appears down"); }
     }

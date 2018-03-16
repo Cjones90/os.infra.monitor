@@ -53,21 +53,6 @@ module.exports = {
 
     wss: null,
 
-    registerGracefulShutdown: function(server) {
-        let close = () => {
-            console.log("WS received SIG signal, shutting down");
-            serverState.changeWebSocketState(false)
-            server.close(() => {
-                console.log("Closed out all WS connections successfully");
-            })
-        }
-        process.on("SIGTERM", close)
-        process.on("SIGHUP", close)
-        process.on("SIGINT", close)
-        process.on("SIGQUIT", close)
-        process.on("SIGABRT", close)
-    },
-
     // TODO: Need to more thoroughly test WS connections/handlers/events like we've
     //   done with mongo and redis
     // At the moment I think when the WS server goes down it won't go back up by itself
@@ -76,19 +61,8 @@ module.exports = {
             ? { port: opts }
             : { server: opts }
         this.wss = new WebSocket.Server(serverInit);
-        this.wss.on("listening", () => { serverState.changeWebSocketState(true) })
-        this.wss.on("error", () => { serverState.changeWebSocketState(false) })
-        this.registerGracefulShutdown(this.wss)
-        this.wss.broadcast = (data) => {
-            this.wss.clients.forEach((client) => {
-                if(client.readyState === WebSocket.OPEN) {
-                    this.canSendInfo(client, (canSend) => {
-                         canSend && client.send(data);
-                    })
-                }
-            });
-        };
-        this.registerEventHandlers();
+        this.attachListeners();
+        this.attachMethods();
         setInterval(this.startKeepAliveChecks.bind(this), KEEP_ALIVE_INTERVAL)
         // TODO: Turn into pub/sub model, only broadcast when changes happen vs checking on an interval
         setInterval(this.checkCenters.bind(this), BROADCAST_INTERVAL)
@@ -125,7 +99,24 @@ module.exports = {
         // console.log(wsId+" sent pong");
     },
 
-    registerEventHandlers: function() {
+    attachMethods: function() {
+        this.wss.broadcast = (data) => {
+            this.wss.clients.forEach((client) => {
+                if(client.readyState === WebSocket.OPEN) {
+                    this.canSendInfo(client, (canSend) => {
+                         canSend && client.send(data);
+                    })
+                }
+            });
+        };
+    },
+
+    attachListeners: function() {
+        this.wss.on("listening", () => {
+            serverState.changeServerState("ws", true)
+            serverState.startIfAllReady()
+        })
+        this.wss.on("error", () => { serverState.changeServerState("ws", false) })
         this.wss.on("connection", (ws, req) => {
             ws.upgradeReq = req
             let wsId = ws.upgradeReq.headers['sec-websocket-key'];
@@ -149,6 +140,7 @@ module.exports = {
                 console.log("Client closed. Clients in room after close evt: ", connectedPeers.length);
             })
         });
+        serverState.registerSigHandler(this.wss, "ws", false)
     },
 
     sendConsulPort: function(chatroom, evt, ws) {

@@ -14,14 +14,15 @@ const serverState = require("./serverState.js");
 const BIN = process.env.BIN;
 const PUB_FILES = process.env.PUB_FILES;
 const OUTPUT_FILES = process.env.OUTPUT_FILES;
-const REGISTER_SERVICE = JSON.parse(process.env.REGISTER_SERVICE);
 const DEV_ENV = process.env.DEV_ENV ? JSON.parse(process.env.DEV_ENV) : ""
-
-const CONSUL_CHECK_UUID = os.hostname();
-const LOG_EVERY_NUM_CHECKS = process.env.LOG_EVERY_NUM_CHECKS || 15;
-let serverCheckCount = 0;
+const REGISTER_SERVICE = process.env.REGISTER_SERVICE
+    ? JSON.parse(process.env.REGISTER_SERVICE)
+    : false;
 
 const ws = require("./ws.js");
+
+serverState.registerConnection("http")
+serverState.registerConnection("ws")
 
 
 
@@ -47,7 +48,7 @@ const server = {
 
         // Not sure how having this before server.listen affects it, just noting it here
         ws.init(server)
-        this.registerGracefulShutdown(server)
+        serverState.registerSigHandler(server, "http", REGISTER_SERVICE)
         if(REGISTER_SERVICE) { service.register(DEV_ENV); }
 
         let serverType = keyExists && options.key !== "" ? "https" : "http"
@@ -55,52 +56,18 @@ const server = {
 
         server.listen(serverPort, () => {
             console.log(`${serverType} server running on port ${serverPort}`)
-            setTimeout(() => {
-                process.send('ready')
-                serverState.changeServerState(true)
-            }, 1000);
+            serverState.changeServerState("http", true)
+            serverState.startIfAllReady()
         });
     },
 
-    registerGracefulShutdown: function(server) {
-        let close = () => {
-            console.log("HTTP received SIG signal, shutting down");
-            serverState.changeServerState(false)
-            let closeServer = () => server.close(() => {
-                console.log("Closed out http successfully");
-                // TODO: Wait to make sure db ACTUALLY closed
-                setTimeout(() => { console.log("== Exiting now =="); process.exit() }, 1000)
-            })
-            REGISTER_SERVICE && service.deregisterCheck(CONSUL_CHECK_UUID, closeServer);
-            !REGISTER_SERVICE && closeServer()
-        }
-        process.on("SIGTERM", close)
-        process.on("SIGHUP", close)
-        process.on("SIGINT", close)
-        process.on("SIGQUIT", close)
-        process.on("SIGABRT", close)
-    },
-
     serverListener: function (req, res) {
+
         let isDockerHealthCheck = req.headers.host === "localhost" && req.url === "/healthcheck"
+
         if(req.url.indexOf('/api/') > -1) { routes(req, res); }
         else if (isDockerHealthCheck) {
-            let systems_online = serverState.ws_is_healthy && serverState.server_is_healthy;
-            if(LOG_EVERY_NUM_CHECKS > 0 && ++serverCheckCount % LOG_EVERY_NUM_CHECKS === 0) {
-                console.log(`Container ${os.hostname}: ${systems_online?"Online":"Malfunctioning"}`);
-            }
-            let httpStatusCode = systems_online ? 200 : 404
-            res.writeHead(httpStatusCode)
-
-            let exitCode = systems_online ? "0" : "1"
-            res.end(exitCode)
-
-            let checkPassOrFail = systems_online ? "pass" : "fail"
-            let TTL = {
-                definition: "passOrFail",
-                path: `/v1/agent/check/${checkPassOrFail}/${CONSUL_CHECK_UUID}`
-            }
-            REGISTER_SERVICE && service.sendToCatalog(TTL)
+            serverState.handleHealthCheck(res)
         }
         else {
             let extname = path.extname(url.parse(req.url).pathname);

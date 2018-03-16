@@ -169,6 +169,7 @@ function getToken(reponame) {
             res.on("data", (data) => raw += data.toString())
             res.on("err", (err) => { reject(err) })
             res.on("end", () => {
+                // TODO: Handle gracefully in case we get a bad response - see auth for ex
                 let res = raw ? JSON.parse(raw) : ""
                 if(res) {
                     apps.repos[reponame].exp = new Date(res.issued_at)
@@ -206,6 +207,7 @@ function getTags({token, reponame}) {
             res.on("data", (data) => raw += data.toString())
             res.on("err", (err) => { reject(err) })
             res.on("end", () => {
+                // TODO: Handle gracefully in case we get a bad response - see auth for ex
                 let res = JSON.parse(raw)
                 if(!res.tags) { return reject("Unable to retrieve tags") }
                 // Remove latest tag

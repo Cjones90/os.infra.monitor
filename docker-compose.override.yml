@@ -9,6 +9,7 @@ services:
         volumes:
             - ./src:/home/app/src
             - ./server:/home/app/server
+            - ./docker-compose.override.yml:/home/app/docker-compose.yml
             ### TODO: Need a better way to checkout/launch new versions when
             ###  we eventually support this better
             ### Launching services from inside the container will be a later release
@@ -45,8 +46,8 @@ services:
         healthcheck:
             test: exit $$(curl -s http://localhost/healthcheck)
             interval: 5s
-            timeout: 10s
-            start_period: 0s
+            timeout: 2s
+            start_period: 5s
         environment:
             REGISTER_SERVICE:       "false"
             USE_CONSUL_DB:          "false"
@@ -55,6 +56,8 @@ services:
             LOG_EVERY_NUM_CHECKS:   5
             DEV_ENV:                "true"
 
+# TODO: Some type of api integration test to make sure we still handle
+#  all previously registered api calls and optionally if we missed adding any new ones
 
 networks:
     proxy:

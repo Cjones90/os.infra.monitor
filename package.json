@@ -5,7 +5,7 @@
         "request": "^2.79.0",
         "ws": "^5.0.0",
         "consul": "^0.29.0",
-        "os-npm-util": "https://github.com/Cjones90/os.npm.util/tarball/master#0.4.0"
+        "os-npm-util": "https://github.com/Cjones90/os.npm.util/tarball/master#0.4.2"
     },
     "devDependencies": {
         "babel-core": "^6.22.1",
