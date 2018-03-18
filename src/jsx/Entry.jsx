@@ -13,18 +13,21 @@ window.ws = new WS();
 
 require("../style/Entry.less")
 
+let emptyMachine = {
+    name: "",
+    address: "",
+    services: [],
+    checks: []
+}
+
 class Entry extends React.Component {
 
     constructor(props) {
         super(props)
         this.state = {
             servers: [],
-            machine: {
-                name: "",
-                address: "",
-                services: [],
-                checks: []
-            }
+            machine: Object.assign({}, emptyMachine),
+            selectedMachine: Object.assign({}, emptyMachine)
         }
         this.handleWsMsg = this.handleWsMsg.bind(this)
         this.checkServerStatus = this.checkServerStatus.bind(this)
@@ -77,9 +80,6 @@ class Entry extends React.Component {
         this.setState({ servers: this.sortByPort(servers) })
     }
 
-    // passMachine(e) {
-    //     this.setState({machine: e})
-    // }
 
     render() {
 
@@ -102,8 +102,11 @@ class Entry extends React.Component {
                 <h2>App Health</h2>
 
                 <div id="serverContainer">
-                    <Graph passMachine={(e) => this.setState({machine: e})}/>
-                    <SidePanel machine={this.state.machine}/>
+                    <Graph passMachine={(e) => this.setState({machine: e})}
+                        removeMachine={(e) => this.setState({machine: emptyMachine})}
+                        selectMachine={(e) => this.setState({selectedMachine: e})}/>
+                    <SidePanel machine={this.state.machine}
+                        selectedMachine={this.state.selectedMachine}/>
                     {servers}
                 </div>
 

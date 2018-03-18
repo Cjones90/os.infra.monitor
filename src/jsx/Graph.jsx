@@ -9,6 +9,8 @@ require("../style/Graph.less")
 
 const myjson = require("../js/sample.js")
 
+const SHOW_LAUNCHER = false
+
 class Graph extends React.Component {
 
     constructor(props) {
@@ -26,10 +28,15 @@ class Graph extends React.Component {
         this.handleServices = this.handleServices.bind(this);
         this.createTidyTree = this.createTidyTree.bind(this);
         this.adjustToolTip = this.adjustToolTip.bind(this);
-        this.selectMachine = this.selectMachine.bind(this);
+        this.clickMachine = this.clickMachine.bind(this);
+        this.hoverOutMachine = this.hoverOutMachine.bind(this);
+
         this.passMachine = props.passMachine.bind(this);
+        this.selectMachine = props.selectMachine.bind(this);
+        this.removeMachine = props.removeMachine.bind(this);
 
         this.selectedMachine = "";
+        this.hoveredMachine = "";
     }
 
     componentDidMount() {
@@ -54,10 +61,11 @@ class Graph extends React.Component {
     handleConsulPort(consulPort) {
         let isLocal = location.hostname.match(/localhost|\d/)
         // Only http atm - This way is purely for convenience between all the envs atm
-        let splitHost = location.hostname.split(".")
-        let domain = splitHost.slice(-2).join(".")
+        let domain = location.hostname.match(/([\w]+)\.[\w]+$/)
+            ? location.hostname.match(/([\w]+)\.[\w]+$/)[0]
+            : location.hostname
         let consulHost = isLocal
-            ? `http://${location.hostname}:${consulPort}`
+            ? `http://${domain}:${consulPort}`
             : `http://consul.${domain}:${consulPort}`
         this.setState({leader: consulHost})
     }
@@ -67,7 +75,11 @@ class Graph extends React.Component {
         let updatedMachine = root.children[0].children.filter((machine) => {
             return machine.name === this.selectedMachine
         })
+        let updatedHoverMachine = root.children[0].children.filter((machine) => {
+            return machine.name === this.hoveredMachine
+        })
         updatedMachine.length && this.selectMachine(updatedMachine[0])
+        updatedHoverMachine.length && this.passMachine(updatedHoverMachine[0])
         this.setState({root: root})
 
     }
@@ -119,18 +131,28 @@ class Graph extends React.Component {
     }
 
     adjustToolTip(e) {
-        let tooltips = document.querySelectorAll('.hiddenServices');
-        let x = (e.clientX + -200) + 'px',
-            y = (e.clientY + 20) + 'px';
-        for (let i = 0; i < tooltips.length; i++) {
-            tooltips[i].style.top = y;
-            tooltips[i].style.left = x;
-        }
+        // let tooltips = document.querySelectorAll('.hiddenServices');
+        // let x = (e.clientX + -200) + 'px',
+        //     y = (e.clientY + 20) + 'px';
+        // for (let i = 0; i < tooltips.length; i++) {
+        //     tooltips[i].style.top = y;
+        //     tooltips[i].style.left = x;
+        // }
     }
 
-    selectMachine(e) {
+    clickMachine(e) {
         this.selectedMachine = e.name
+        this.selectMachine(e)
+    }
+
+    hoverMachine(e) {
+        this.hoveredMachine = e.name
         this.passMachine(e)
+    }
+
+    hoverOutMachine() {
+        this.hoveredMachine = ""
+        this.removeMachine()
     }
 
     render () {
@@ -152,10 +174,13 @@ class Graph extends React.Component {
                 })
                 let machineStatus = machine.checks.every((check) => check.Status === "passing")
                 let machineHealth = machineStatus ? "passing" : "critical"
+                let isSelected = machine.name === this.selectedMachine ? "selected" : ""
 
                 return (
-                    <div className={`machine ${machineHealth}`} key={ind} onMouseMove={this.adjustToolTip}
-                        onClick={this.selectMachine.bind(this, machine)}>
+                    <div className={`machine ${machineHealth} ${isSelected}`} key={ind}
+                        onMouseEnter={this.hoverMachine.bind(this, machine)}
+                        onMouseLeave={this.hoverOutMachine.bind(this)}
+                        onClick={this.clickMachine.bind(this, machine)}>
                         <div className="machineName">
                             Node: <strong>{machine.name}</strong>
                             <br />
@@ -196,6 +221,8 @@ class Graph extends React.Component {
             )
         })
 
+        let launcher = SHOW_LAUNCHER ? <Launcher /> : null
+
         // <svg id="tidytree" width="900" height="670"></svg>
         return (
             <div id="component-graphs">
@@ -210,7 +237,7 @@ class Graph extends React.Component {
                         </div>
                         {displayServices}
                     </div>
-                    <Launcher />
+                    {launcher}
                 </div>
                 {dataCenters}
 

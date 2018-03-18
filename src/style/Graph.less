@@ -84,7 +84,7 @@
 
     .dataCenter {
         display: flex;
-        flex-flow: column wrap;
+        flex-flow: column nowrap;
         flex: 1;
         border: 1px solid white;
         padding: 5px;
@@ -100,15 +100,16 @@
                 flex-flow: column;
                 flex: 1;
                 min-width: 20%;
-                margin: 5px;
+                margin: 2px;
                 padding: 5px;
                 font-size: 12px;
-                border-radius: 5px;
+                border: 3px solid #313131;
+                &.selected { border: 3px solid white; }
                 .machineName { display: block; }
-                &:hover { cursor: pointer; }
+                &:hover { cursor: pointer; background: #60b164; }
                 &:hover .hiddenServices {
-                    display:flex;
-                    position:absolute;
+                    // display:flex;   // Keep hidden for now until we clean it up
+                    // position:absolute;
                 }
                 .hiddenServices {
                     // background: #b7b7b7;

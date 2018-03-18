@@ -32,19 +32,19 @@
         .services, .checks {
             display: flex;
             flex: 1;
-            flex-flow: column wrap;
+            flex-flow: column nowrap;
+            margin-bottom: 1.5em;
             > h4 {
                 display: flex;
             }
             > div {
                 display: flex;
-                flex-flow: column wrap;
+                flex-flow: column nowrap;
                 margin: 5px;
                 .check { cursor: pointer; }
                 .service, .check {
                     background: #529255;
                     margin: 2px;
-                    border-radius: 5px;
                     padding: 3px;
                 }
                 .check.passing { background: @passing; }

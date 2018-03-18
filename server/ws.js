@@ -270,7 +270,70 @@ module.exports = {
         })
     },
 
+    populateWithTestData: function() {
+        let checks1 = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]
+        let checks2 = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
+
+        let createChecks = (checkArr, nodeNum) => {
+            let id = `id_${Math.random().toFixed(5)}`
+            return checkArr.map((c, ind) => {
+                return { Node: `kc-HP${nodeNum}`,
+                        CheckID: id,
+                        Name: `monitor_vdev-${nodeNum}_${c}`,
+                        Status: 'passing',
+                        Notes: '',
+                        Output: 'Agent alive and reachable',
+                        ServiceID: '',
+                        ServiceName: '',
+                        ServiceTags: [],
+                        CreateIndex: 5,
+                        ModifyIndex: 5
+                }
+            })
+        }
+
+        let createNode = (nodeToCopy, checkArr, dcName, dcInd) => {
+            let len = root.children[dcInd].children.length
+            let newChecks = createChecks(checkArr, len)
+            let newNode = Object.assign({}, nodeToCopy)
+            let nodeChecks = newNode.checks.concat(newChecks)
+            newNode.name = newNode.name+`_${dcName}_${len}`
+            newNode.checks = nodeChecks
+            root.children[dcInd].children.push(newNode)
+        }
+
+        let createDC = (dcToCopy, dcName) => {
+            let len = root.children.length
+            let newDC = Object.assign({}, dcToCopy)
+            let newNodes = Object.assign([], dcToCopy.children)
+            newDC.name = dcName
+            newDC.children = newNodes
+            root.children.push(newDC)
+
+        }
+
+        createDC(root.children[0], "dc2")
+
+        createNode(root.children[0].children[0], checks1, root.children[0].name, 0)
+        createNode(root.children[0].children[0], checks1, root.children[0].name, 0)
+        createNode(root.children[0].children[0], checks1, root.children[0].name, 0)
+        createNode(root.children[0].children[0], checks1, root.children[0].name, 0)
+        createNode(root.children[0].children[0], checks2, root.children[0].name, 0)
+        createNode(root.children[0].children[0], checks2, root.children[0].name, 0)
+        createNode(root.children[0].children[0], checks2, root.children[0].name, 0)
+
+        createNode(root.children[1].children[0], checks1, root.children[1].name, 1)
+        createNode(root.children[1].children[0], checks1, root.children[1].name, 1)
+        createNode(root.children[1].children[0], checks1, root.children[1].name, 1)
+        createNode(root.children[1].children[0], checks1, root.children[1].name, 1)
+        createNode(root.children[1].children[0], checks2, root.children[1].name, 1)
+        createNode(root.children[1].children[0], checks2, root.children[1].name, 1)
+        createNode(root.children[1].children[0], checks2, root.children[1].name, 1)
+        // console.log(root);
+    },
+
     broadcastDataCenters: function () {
+        // this.populateWithTestData()
         let response = { type: "services", root: root }
         this.wss.broadcast(JSON.stringify(response))
     },

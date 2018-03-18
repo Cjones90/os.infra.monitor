@@ -19,7 +19,7 @@ const getCookie = (name) => {
 export default class WS {
 
     constructor() {
-        this.initialRetryTime = 50
+        this.initialRetryTime = 500
         this.defaultRetryTime = 5000
         this.retries = 0
         this.maxRetries = 15

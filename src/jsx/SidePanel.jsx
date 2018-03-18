@@ -11,14 +11,22 @@ class SidePanel extends React.Component {
     constructor(props) {
         super(props)
         this.state = {
-            machine: props.machine
+            machine: props.machine,
+            selectedMachine: props.selectedMachine
         }
         this.deregisterCheck = this.deregisterCheck.bind(this);
     }
 
     componentWillReceiveProps(nextProps) {
-        nextProps.machine.checks.sort((a, b) => a.Name > b.Name)
-        this.setState({ machine: nextProps.machine })
+        let sort = (a, b) => {
+            if(a.Name < b.Name) return -1;
+            if(a.Name > b.Name) return 1;
+            return 0;
+        }
+        nextProps.machine && nextProps.machine.checks.sort(sort)
+        nextProps.selectedMachine && nextProps.selectedMachine.checks.sort(sort)
+
+        this.setState({ machine: nextProps.machine, selectedMachine: nextProps.selectedMachine })
     }
 
     deregisterCheck(e) {
@@ -30,31 +38,33 @@ class SidePanel extends React.Component {
 
     render () {
 
-        let services = this.state.machine.services.map((service, ind) => {
+        let activeMachine = this.state.machine.name ? this.state.machine : this.state.selectedMachine
+
+        let services = activeMachine.services.map((service, ind) => {
             return (<div className={`service`} key={ind}>{service.name}{service.version && ": v"+service.version}</div>)
         })
 
-        let checks = this.state.machine.checks.map((check, ind) => {
+        let checks = activeMachine.checks.map((check, ind) => {
             let status = check.CheckID.match(/service:/)
                 ? check.Output
                 : check.Status
             return (
                 <div className={`check ${check.Status}`}
                 key={ind}
-                onClick={this.deregisterCheck.bind(this, {check: check, ip: this.state.machine.address})}>
+                onClick={this.deregisterCheck.bind(this, {check: check, ip: activeMachine.address})}>
                     {check.Name}: {status}
                 </div>
             )
         })
 
-        let machineStatus = this.state.machine.checks.every((check) => check.Status === "passing")
+        let machineStatus = activeMachine.checks.every((check) => check.Status === "passing")
         let machineHealth = machineStatus ? "passing" : "critical"
 
         return (
             <div id="component-sidepanel">
                 <div className={"header"}>
-                    <div>Name: {this.state.machine.name}</div>
-                    <div>IP: {this.state.machine.address}</div>
+                    <div>Name: {activeMachine.name}</div>
+                    <div>IP: {activeMachine.address}</div>
                 </div>
                 <div className={"body"}>
                     <div className={"services"}>
