@@ -32,7 +32,7 @@ services:
                 parallelism: 1
                 delay: 10s
                 failure_action: rollback
-                max_failure_ratio: 1
+                max_failure_ratio: .3
                 order: start-first
             restart_policy:
                 max_attempts: 3
@@ -44,7 +44,7 @@ services:
                     - spread: node.labels.dc
                     - spread: node.labels.az
         healthcheck:
-            test: exit $$(curl -s http://localhost/healthcheck)
+            test: exit $$(curl -sS http://localhost/healthcheck; echo $$?)
             interval: 5s
             timeout: 2s
             start_period: 5s
