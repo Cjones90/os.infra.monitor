@@ -4,14 +4,11 @@ services:
         build:
             context: .
             target: prod
-        image: jestrr/monitor:0.16.2
+        image: jestrr/monitor:0.16.3
         networks:
             - proxy
         ports:
             - "4050:80"
-        # secrets:
-        #     - apps
-        #     - dockerconfig
         deploy:
             replicas: 2
             update_config:
@@ -33,9 +30,3 @@ services:
 networks:
     proxy:
         external: true
-
-# secrets:
-#     apps:
-#         file: $HOME/code/apps.json
-#     dockerconfig:
-#         file: /root/.docker/config.json
