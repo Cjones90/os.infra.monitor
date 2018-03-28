@@ -68,7 +68,7 @@ const routes = function (req, res) {
         let headers = req.headers;
 
         switch(requrl) {
-            case "/api/put/deregistercheck": service.deregisterCheck(parsed.check, respond);
+            case "/api/put/deregistercheck": deregisterCheck(headers, parsed.check, respond);
             break;
 
             case "/api/get/username": getUser(headers, "user", respond) //username / key
@@ -114,6 +114,18 @@ function checkAccess(headers, app, accessReq, callback) {
     .catch((e) => {
         console.log("ERR - ROUTES.CHECKACCESS:\n", e);
         callback({status: false, data: "Server error"})
+    })
+}
+
+
+function deregisterCheck(headers, check, respond) {
+    checkAccess(headers, "monitor", "admin", ({status, data}) => {
+        if(status) {
+            service.deregisterCheck(check, respond)
+        }
+        else {
+            respond({status: false, data})
+        }
     })
 }
 
