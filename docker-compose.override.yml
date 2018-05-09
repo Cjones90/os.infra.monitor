@@ -19,7 +19,6 @@ services:
             # - /usr/bin/docker:/usr/local/bin/docker
             # - $HOME/code/temprepo:/home/app/repos
 
-        ### NOTE: You can omit/comment out networks for development
         networks:
             - proxy
         ports:

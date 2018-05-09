@@ -14,15 +14,13 @@ const { service, auth } = require("os-npm-util");
 const LATEST_NUM_OF_TAGS = 10;
 const REFRESH_REPO_INTERVAL = 1000 * 60 * 2.6;
 
-const TOGGLE_SERVICE_LAUNCH_FEATURE = process.TOGGLE_SERVICE_LAUNCH_FEATURE
-    ? JSON.parse(TOGGLE_SERVICE_LAUNCH_FEATURE)
-    : false
+const TOGGLE_SERVICE_LAUNCH_FEATURE = process.env.TOGGLE_SERVICE_LAUNCH_FEATURE === "true";
 
-const DEV_ENV = process.env.DEV_ENV ? JSON.parse(process.env.DEV_ENV) : ""
+const DEV_ENV = process.env.DEV_ENV === "true";
 const DEFAULT_AUTH_URL = `http://auth_${DEV_ENV?"dev":"main"}:80`
 // Pretty sure this is the instance where we should be using a constructor
 // I feel we're unintentionally sharing state with ws.js
-auth.USE_AUTH = process.env.USE_AUTH ? JSON.parse(process.env.USE_AUTH) : false;
+auth.USE_AUTH = process.env.USE_AUTH === "true";
 auth.URL = process.env.AUTH_URL ? process.env.AUTH_URL : DEFAULT_AUTH_URL
 
 

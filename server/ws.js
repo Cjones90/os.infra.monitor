@@ -15,11 +15,11 @@ const serverState = require("./serverState.js");
 const CONSUL_API_IP = "172.17.0.1"
 const CONSUL_API_PORT = "8500"
 
-const DEV_ENV = process.env.DEV_ENV ? JSON.parse(process.env.DEV_ENV) : ""
+const DEV_ENV = process.env.DEV_ENV === "true";
 const DEFAULT_AUTH_URL = `http://auth_${DEV_ENV?"dev":"main"}:80`
 // Pretty sure this is the instance where we should be using a constructor
 // I feel we're unintentionally sharing state with routes.js
-auth.USE_AUTH = process.env.USE_AUTH ? JSON.parse(process.env.USE_AUTH) : false;
+auth.USE_AUTH = process.env.USE_AUTH === "true";
 auth.URL = process.env.AUTH_URL ? process.env.AUTH_URL : DEFAULT_AUTH_URL
 
 let root = {

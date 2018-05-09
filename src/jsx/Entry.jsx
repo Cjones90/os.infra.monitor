@@ -7,6 +7,7 @@ import Graph from "./Graph.jsx";
 import SidePanel from "./SidePanel.jsx";
 import Adminbar from "./Adminbar.jsx";
 import { Menu } from "os-npm-util";
+import { ErrorHandler } from "os-npm-util";
 
 import WS from "../js/wsclient.js"
 window.ws = new WS();
@@ -99,6 +100,7 @@ class Entry extends React.Component {
             <div id="component-entry">
                 <Menu />
                 <Adminbar />
+                <ErrorHandler />
                 <h2>App Health</h2>
 
                 <div id="serverContainer">
