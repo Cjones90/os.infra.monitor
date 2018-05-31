@@ -90,7 +90,6 @@ const server = {
                 ".jpeg": { mime: "text/jpeg", encoding: null },
                 ".css": { mime: "text/css", encoding: "utf8" },
                 ".html": { mime: "text/html", encoding: "utf8" },
-                 // .xls application/* could actually be binary or null encoding, untested
                 ".xls": { mime: "application/vnd.ms-excel", encoding: "utf8" },
                 ".xlsx": { mime: "application/vnd.ms-excel", encoding: "utf8" },
                 ".xlsm": { mime: "application/vnd.ms-excel", encoding: "utf8" },
